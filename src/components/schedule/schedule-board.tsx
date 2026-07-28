@@ -37,19 +37,19 @@ const PX_PER_MIN = SLOT_PX / SLOT_MINUTES;
  */
 const LAYER_STYLE = {
   shift: {
-    className: "bg-primary-soft/70 border-primary/50 text-foreground",
+    className: "bg-accent-subtle border-accent-default/50 text-primary-text",
     hatched: false,
     icon: UserCheck,
     label: { en: "Shift", vi: "Ca làm" },
   },
   appointment: {
-    className: "bg-sky-bg border-sky/50 text-sky",
+    className: "bg-info-bg border-info-border text-info",
     hatched: true,
     icon: CalendarClock,
     label: { en: "Appointment", vi: "Lịch hẹn" },
   },
   walkin: {
-    className: "bg-butter-bg border-butter/50 text-butter",
+    className: "bg-warning-bg border-warning-border text-warning",
     hatched: true,
     icon: Footprints,
     label: { en: "Walk-in", vi: "Khách vãng lai" },

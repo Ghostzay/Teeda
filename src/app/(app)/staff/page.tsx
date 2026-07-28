@@ -62,7 +62,7 @@ export default async function StaffPage() {
         </Link>
       </header>
 
-      <Card className="edge-gold">
+      <Card className="edge-accent">
         <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

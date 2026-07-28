@@ -1,157 +1,343 @@
 @import "tailwindcss";
 
-@custom-variant light (&:is(.light *));
-
 /**
- * Teeda design system — dark first.
+ * Teeda design system.
  *
- * Surfaces are layered, never flat: a near-black base, cards one step up,
- * raised elements two. That separation is what stops a dark UI reading as a
- * black rectangle with text on it.
+ * Two INDEPENDENT axes, both stamped on <html> before first paint:
  *
- * One bold accent (polish fuchsia) carries primary actions and active state
- * and nothing else — if everything is accented, nothing is. Status and
- * category tags use soft pastels, which sit quietly on dark without competing.
+ *   data-theme  the palette and personality  (midnight-plum | noir)
+ *   data-mode   light or dark                (light | dark)
  *
- * Every value is a token. Components never hardcode a colour.
+ * A theme is not "the dark one" — every theme is authored for both modes.
+ *
+ * ---------------------------------------------------------------------------
+ * How to add a theme
+ * ---------------------------------------------------------------------------
+ * Add exactly two blocks below:
+ *
+ *   [data-theme="your-name"][data-mode="dark"]  { ...every token... }
+ *   [data-theme="your-name"][data-mode="light"] { ...every token... }
+ *
+ * and register it in src/lib/theme.ts. Nothing else changes — not the alias
+ * layer, not the Tailwind mapping, and not one component. If a new theme ever
+ * requires touching a component, a token is missing; add the token instead.
+ *
+ * Theme blocks define ONLY the semantic primitives listed in THEME CONTRACT.
+ * They never define an alias, a radius, or a type step — those are global.
+ *
+ * ---------------------------------------------------------------------------
+ * THEME CONTRACT — every theme × mode block must define all of these
+ * ---------------------------------------------------------------------------
+ *   surfaces  --surface-canvas   the page itself
+ *             --surface-raised   cards sitting on the canvas
+ *             --surface-overlay  hovered, elevated, popovers, dialogs
+ *             --surface-sunken   wells, rails, tracks — recedes from canvas
+ *
+ *   text      --text-primary     body and headings
+ *             --text-secondary   supporting copy
+ *             --text-muted       metadata, labels
+ *             --text-on-accent   anything sitting on --accent-default
+ *
+ *   borders   --border-subtle    decorative hairlines *inside* a surface
+ *             --border-default   component boundaries
+ *             --border-strong    emphasis and focus
+ *
+ *   accent    --accent-default   the one action colour
+ *             --accent-hover
+ *             --accent-subtle-bg quiet accent fill
+ *             --accent-on-accent foreground on the accent
+ *
+ *   status    --status-{success,warning,danger,info}-{fg,bg,border}
+ *
+ * Colours are OKLCH so lightness steps are perceptually even — that is what
+ * makes "one step lighter" mean the same thing in every theme.
  */
+
+/* ==========================================================================
+   MIDNIGHT PLUM — deep plum canvas, saturated magenta accent
+   ========================================================================== */
+
+[data-theme="midnight-plum"][data-mode="dark"] {
+  --surface-canvas: oklch(0.157 0.012 312);
+  --surface-raised: oklch(0.212 0.015 312);
+  --surface-overlay: oklch(0.268 0.018 312);
+  --surface-sunken: oklch(0.122 0.011 312);
+
+  --text-primary: oklch(0.975 0.004 300);
+  --text-secondary: oklch(0.868 0.008 300);
+  --text-muted: oklch(0.762 0.011 300);
+  --text-on-accent: oklch(0.145 0.03 350);
+
+  --border-subtle: oklch(0.268 0.014 312);
+  --border-default: oklch(0.532 0.021 312);
+  --border-strong: oklch(0.585 0.022 312);
+
+  --accent-default: oklch(0.705 0.215 350);
+  --accent-hover: oklch(0.775 0.175 350);
+  --accent-subtle-bg: oklch(0.302 0.088 350);
+  --accent-on-accent: oklch(0.145 0.03 350);
+
+  --status-success-fg: oklch(0.872 0.135 162);
+  --status-success-bg: oklch(0.292 0.055 162);
+  --status-success-border: oklch(0.508 0.105 162);
+
+  --status-warning-fg: oklch(0.878 0.135 84);
+  --status-warning-bg: oklch(0.305 0.058 84);
+  --status-warning-border: oklch(0.545 0.108 84);
+
+  --status-danger-fg: oklch(0.792 0.145 22);
+  --status-danger-bg: oklch(0.298 0.088 22);
+  --status-danger-border: oklch(0.548 0.165 22);
+
+  --status-info-fg: oklch(0.852 0.098 242);
+  --status-info-bg: oklch(0.292 0.055 242);
+  --status-info-border: oklch(0.522 0.105 242);
+}
+
+[data-theme="midnight-plum"][data-mode="light"] {
+  --surface-canvas: oklch(0.968 0.006 312);
+  --surface-raised: oklch(0.995 0.002 312);
+  --surface-overlay: oklch(1 0 0);
+  --surface-sunken: oklch(0.928 0.009 312);
+
+  --text-primary: oklch(0.215 0.022 312);
+  --text-secondary: oklch(0.392 0.021 312);
+  --text-muted: oklch(0.482 0.019 312);
+  --text-on-accent: oklch(0.995 0.003 350);
+
+  --border-subtle: oklch(0.902 0.008 312);
+  --border-default: oklch(0.628 0.017 312);
+  --border-strong: oklch(0.552 0.018 312);
+
+  --accent-default: oklch(0.492 0.208 350);
+  --accent-hover: oklch(0.412 0.185 350);
+  --accent-subtle-bg: oklch(0.938 0.038 350);
+  --accent-on-accent: oklch(0.995 0.003 350);
+
+  --status-success-fg: oklch(0.432 0.115 162);
+  --status-success-bg: oklch(0.942 0.045 162);
+  --status-success-border: oklch(0.592 0.108 162);
+
+  --status-warning-fg: oklch(0.448 0.105 70);
+  --status-warning-bg: oklch(0.948 0.055 84);
+  --status-warning-border: oklch(0.598 0.112 78);
+
+  --status-danger-fg: oklch(0.468 0.185 25);
+  --status-danger-bg: oklch(0.948 0.035 25);
+  --status-danger-border: oklch(0.672 0.168 25);
+
+  --status-info-fg: oklch(0.442 0.138 248);
+  --status-info-bg: oklch(0.942 0.038 242);
+  --status-info-border: oklch(0.612 0.135 248);
+}
+
+/* ==========================================================================
+   NOIR — true neutral greys, one high-contrast accent.
+
+   Noir is also the accessible baseline: its accent is silver-on-ink in dark
+   and ink-on-paper in light, so the action colour is the highest-contrast
+   pair in the theme rather than a hue fighting the background.
+   ========================================================================== */
+
+[data-theme="noir"][data-mode="dark"] {
+  --surface-canvas: oklch(0.145 0 0);
+  --surface-raised: oklch(0.202 0 0);
+  --surface-overlay: oklch(0.258 0 0);
+  --surface-sunken: oklch(0.112 0 0);
+
+  --text-primary: oklch(0.988 0 0);
+  --text-secondary: oklch(0.885 0 0);
+  --text-muted: oklch(0.788 0 0);
+  --text-on-accent: oklch(0.145 0 0);
+
+  --border-subtle: oklch(0.262 0 0);
+  --border-default: oklch(0.542 0 0);
+  --border-strong: oklch(0.605 0 0);
+
+  --accent-default: oklch(0.928 0.014 268);
+  --accent-hover: oklch(0.988 0.008 268);
+  --accent-subtle-bg: oklch(0.288 0.012 268);
+  --accent-on-accent: oklch(0.145 0 0);
+
+  --status-success-fg: oklch(0.885 0.115 162);
+  --status-success-bg: oklch(0.288 0.045 162);
+  --status-success-border: oklch(0.535 0.095 162);
+
+  --status-warning-fg: oklch(0.892 0.118 86);
+  --status-warning-bg: oklch(0.302 0.048 86);
+  --status-warning-border: oklch(0.568 0.098 86);
+
+  --status-danger-fg: oklch(0.812 0.135 24);
+  --status-danger-bg: oklch(0.298 0.078 24);
+  --status-danger-border: oklch(0.572 0.152 24);
+
+  --status-info-fg: oklch(0.868 0.088 242);
+  --status-info-bg: oklch(0.292 0.048 242);
+  --status-info-border: oklch(0.548 0.095 242);
+}
+
+[data-theme="noir"][data-mode="light"] {
+  --surface-canvas: oklch(0.972 0 0);
+  --surface-raised: oklch(1 0 0);
+  --surface-overlay: oklch(1 0 0);
+  --surface-sunken: oklch(0.928 0 0);
+
+  --text-primary: oklch(0.172 0 0);
+  --text-secondary: oklch(0.368 0 0);
+  --text-muted: oklch(0.452 0 0);
+  --text-on-accent: oklch(0.992 0 0);
+
+  --border-subtle: oklch(0.898 0 0);
+  --border-default: oklch(0.612 0 0);
+  --border-strong: oklch(0.522 0 0);
+
+  --accent-default: oklch(0.268 0.012 268);
+  --accent-hover: oklch(0.172 0.01 268);
+  --accent-subtle-bg: oklch(0.928 0.006 268);
+  --accent-on-accent: oklch(0.992 0 0);
+
+  --status-success-fg: oklch(0.412 0.112 162);
+  --status-success-bg: oklch(0.938 0.045 162);
+  --status-success-border: oklch(0.588 0.108 162);
+
+  --status-warning-fg: oklch(0.428 0.102 70);
+  --status-warning-bg: oklch(0.945 0.052 84);
+  --status-warning-border: oklch(0.595 0.112 78);
+
+  --status-danger-fg: oklch(0.448 0.182 25);
+  --status-danger-bg: oklch(0.945 0.032 25);
+  --status-danger-border: oklch(0.648 0.165 25);
+
+  --status-info-fg: oklch(0.422 0.135 248);
+  --status-info-bg: oklch(0.938 0.036 242);
+  --status-info-border: oklch(0.645 0.125 248);
+}
+
+/* Pre-hydration fallback: midnight plum, dark. The inline script in the
+   document head stamps the real pair before first paint; this only covers the
+   case where scripting is off entirely. */
 :root {
-  /* --- Layered surfaces ------------------------------------------------- */
-  --base: oklch(0.157 0.012 312);
-  --surface-1: oklch(0.196 0.014 312);
-  --surface-2: oklch(0.235 0.016 312);
-  --surface-3: oklch(0.278 0.018 312);
+  --surface-canvas: oklch(0.157 0.012 312);
+  --surface-raised: oklch(0.212 0.015 312);
+  --surface-overlay: oklch(0.268 0.018 312);
+  --surface-sunken: oklch(0.122 0.011 312);
 
-  --background: var(--base);
-  --foreground: oklch(0.965 0.004 300);
+  --text-primary: oklch(0.975 0.004 300);
+  --text-secondary: oklch(0.868 0.008 300);
+  --text-muted: oklch(0.762 0.011 300);
+  --text-on-accent: oklch(0.145 0.03 350);
 
-  --card: var(--surface-1);
-  --card-foreground: var(--foreground);
-  --popover: var(--surface-2);
-  --popover-foreground: var(--foreground);
+  --border-subtle: oklch(0.268 0.014 312);
+  --border-default: oklch(0.436 0.019 312);
+  --border-strong: oklch(0.585 0.022 312);
 
-  /* --- The one bold accent --------------------------------------------- */
-  --primary: oklch(0.665 0.235 350);
-  --primary-foreground: oklch(0.145 0.03 350);
-  --primary-soft: oklch(0.30 0.09 350);
+  --accent-default: oklch(0.705 0.215 350);
+  --accent-hover: oklch(0.775 0.175 350);
+  --accent-subtle-bg: oklch(0.302 0.088 350);
+  --accent-on-accent: oklch(0.145 0.03 350);
 
-  /* Rose gold, for hairlines and premium edges only. */
-  --rose-gold: oklch(0.795 0.085 62);
-  --rose-gold-soft: oklch(0.32 0.045 62);
+  --status-success-fg: oklch(0.872 0.135 162);
+  --status-success-bg: oklch(0.292 0.055 162);
+  --status-success-border: oklch(0.508 0.105 162);
 
-  --secondary: var(--surface-3);
-  --secondary-foreground: oklch(0.94 0.006 300);
+  --status-warning-fg: oklch(0.878 0.135 84);
+  --status-warning-bg: oklch(0.305 0.058 84);
+  --status-warning-border: oklch(0.545 0.108 84);
 
-  --muted: var(--surface-2);
-  --muted-foreground: oklch(0.735 0.012 300);
+  --status-danger-fg: oklch(0.792 0.145 22);
+  --status-danger-bg: oklch(0.298 0.088 22);
+  --status-danger-border: oklch(0.548 0.165 22);
 
-  --accent: var(--surface-3);
-  --accent-foreground: oklch(0.96 0.005 300);
+  --status-info-fg: oklch(0.852 0.098 242);
+  --status-info-bg: oklch(0.292 0.055 242);
+  --status-info-border: oklch(0.522 0.105 242);
+}
 
-  --destructive: oklch(0.62 0.20 22);
-  --destructive-foreground: oklch(0.15 0.02 22);
+/* ==========================================================================
+   ALIAS LAYER — theme-independent.
 
-  --border: oklch(0.305 0.016 312);
-  --input: oklch(0.34 0.018 312);
-  --ring: var(--primary);
+   shadcn/ui primitives expect --card, --muted, --primary and friends. Rather
+   than fork every primitive, those names are defined ONCE here in terms of the
+   contract above. A new theme redefines the primitives and every alias follows
+   automatically, which is what keeps "add a theme" to one pair of blocks.
+   ========================================================================== */
+:root {
+  --background: var(--surface-canvas);
+  --foreground: var(--text-primary);
 
-  /* --- Sidebar ---------------------------------------------------------- */
-  --ink: oklch(0.178 0.015 312);
-  /* Near-white: ~13:1 on --ink, comfortably past the 7:1 target. */
-  --ink-foreground: oklch(0.975 0.004 300);
-  --ink-muted: oklch(0.86 0.008 300);
-  --ink-accent: var(--surface-3);
-  --ink-border: oklch(0.285 0.018 312);
+  --card: var(--surface-raised);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-overlay);
+  --popover-foreground: var(--text-primary);
 
-  /* --- Soft pastel status ---------------------------------------------- */
-  --status-waiting: oklch(0.80 0.035 265);
-  --status-waiting-bg: oklch(0.285 0.028 265);
-  --status-progress: oklch(0.855 0.105 82);
-  --status-progress-bg: oklch(0.315 0.055 82);
-  --status-completed: oklch(0.855 0.105 162);
-  --status-completed-bg: oklch(0.30 0.05 162);
-  --status-cancelled: oklch(0.72 0.01 300);
-  --status-cancelled-bg: oklch(0.265 0.01 300);
+  --primary: var(--accent-default);
+  --primary-foreground: var(--accent-on-accent);
+  --primary-soft: var(--accent-subtle-bg);
 
-  /* Category pastels — schedule layers and tags. */
-  --tone-mint: oklch(0.855 0.10 168);
-  --tone-mint-bg: oklch(0.295 0.05 168);
-  --tone-butter: oklch(0.87 0.11 88);
-  --tone-butter-bg: oklch(0.315 0.055 88);
-  --tone-lilac: oklch(0.83 0.09 300);
-  --tone-lilac-bg: oklch(0.305 0.055 300);
-  --tone-sky: oklch(0.84 0.085 232);
-  --tone-sky-bg: oklch(0.30 0.05 232);
+  --secondary: var(--surface-overlay);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--surface-sunken);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--surface-overlay);
+  --accent-foreground: var(--text-primary);
+
+  --destructive: var(--status-danger-fg);
+  --destructive-foreground: var(--status-danger-bg);
+
+  --border: var(--border-subtle);
+  --input: var(--border-default);
+  --ring: var(--accent-default);
+
+  /* Domain statuses map onto the four semantic families. The mapping lives in
+     src/lib/status.ts so a component never picks a status colour by hand. */
+  --status-waiting: var(--status-info-fg);
+  --status-waiting-bg: var(--status-info-bg);
+  --status-progress: var(--status-warning-fg);
+  --status-progress-bg: var(--status-warning-bg);
+  --status-completed: var(--status-success-fg);
+  --status-completed-bg: var(--status-success-bg);
+  --status-cancelled: var(--text-muted);
+  --status-cancelled-bg: var(--surface-sunken);
 
   /* Generous by default — this is a tablet product. */
   --radius: 1.125rem;
 }
 
-/* Optional light mode. Dark is the product; this is the courtesy fallback. */
-.light {
-  --base: oklch(0.978 0.008 82);
-  --surface-1: oklch(1 0 0);
-  --surface-2: oklch(0.965 0.008 82);
-  --surface-3: oklch(0.935 0.01 82);
-
-  --background: var(--base);
-  --foreground: oklch(0.235 0.012 300);
-  --card: var(--surface-1);
-  --card-foreground: var(--foreground);
-  --popover: var(--surface-1);
-  --popover-foreground: var(--foreground);
-
-  --primary: oklch(0.475 0.19 350);
-  --primary-foreground: oklch(0.99 0.005 350);
-  --primary-soft: oklch(0.93 0.04 350);
-
-  --rose-gold: oklch(0.60 0.09 62);
-  --rose-gold-soft: oklch(0.93 0.04 62);
-
-  --secondary: var(--surface-3);
-  --secondary-foreground: oklch(0.30 0.03 312);
-  --muted: var(--surface-2);
-  --muted-foreground: oklch(0.475 0.015 300);
-  --accent: var(--surface-3);
-  --accent-foreground: oklch(0.28 0.03 312);
-
-  --border: oklch(0.90 0.01 82);
-  --input: oklch(0.88 0.012 82);
-
-  --ink: oklch(0.20 0.04 330);
-  --ink-foreground: oklch(0.98 0.004 300);
-  --ink-muted: oklch(0.88 0.008 300);
-  --ink-accent: oklch(0.30 0.05 330);
-  --ink-border: oklch(0.31 0.05 330);
-
-  --status-waiting: oklch(0.46 0.03 265);
-  --status-waiting-bg: oklch(0.935 0.012 265);
-  --status-progress: oklch(0.50 0.11 72);
-  --status-progress-bg: oklch(0.945 0.05 82);
-  --status-completed: oklch(0.46 0.10 162);
-  --status-completed-bg: oklch(0.94 0.04 162);
-  --status-cancelled: oklch(0.50 0.012 300);
-  --status-cancelled-bg: oklch(0.93 0.008 300);
-
-  --tone-mint: oklch(0.44 0.10 168);
-  --tone-mint-bg: oklch(0.94 0.045 168);
-  --tone-butter: oklch(0.47 0.10 88);
-  --tone-butter-bg: oklch(0.95 0.05 88);
-  --tone-lilac: oklch(0.44 0.10 300);
-  --tone-lilac-bg: oklch(0.94 0.04 300);
-  --tone-sky: oklch(0.44 0.09 232);
-  --tone-sky-bg: oklch(0.94 0.04 232);
-}
-
 @theme inline {
-  /* Deliberately NOT exposed as `--color-base`: that would mint a `text-base`
-     colour utility which shadows Tailwind's `text-base` font size, painting
-     every `text-base` element near-black. `--base` is consumed through
-     `--background` instead; use `bg-background` for the base surface. */
-  --color-surface-1: var(--surface-1);
-  --color-surface-2: var(--surface-2);
-  --color-surface-3: var(--surface-3);
+  /* Contract tokens. Components write bg-surface-raised, text-secondary,
+     border-strong, bg-status-danger-bg — never a hue. */
+  --color-surface-canvas: var(--surface-canvas);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-sunken: var(--surface-sunken);
 
+  --color-primary-text: var(--text-primary);
+  --color-secondary-text: var(--text-secondary);
+  --color-muted-text: var(--text-muted);
+  --color-on-accent: var(--text-on-accent);
+
+  --color-subtle: var(--border-subtle);
+  --color-default: var(--border-default);
+  --color-strong: var(--border-strong);
+
+  --color-accent-default: var(--accent-default);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle-bg);
+
+  --color-success: var(--status-success-fg);
+  --color-success-bg: var(--status-success-bg);
+  --color-success-border: var(--status-success-border);
+  --color-warning: var(--status-warning-fg);
+  --color-warning-bg: var(--status-warning-bg);
+  --color-warning-border: var(--status-warning-border);
+  --color-danger: var(--status-danger-fg);
+  --color-danger-bg: var(--status-danger-bg);
+  --color-danger-border: var(--status-danger-border);
+  --color-info: var(--status-info-fg);
+  --color-info-bg: var(--status-info-bg);
+  --color-info-border: var(--status-info-border);
+
+  /* Aliases, so the shadcn primitives keep working unchanged. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -173,15 +359,6 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --color-rose-gold: var(--rose-gold);
-  --color-rose-gold-soft: var(--rose-gold-soft);
-
-  --color-ink: var(--ink);
-  --color-ink-foreground: var(--ink-foreground);
-  --color-ink-muted: var(--ink-muted);
-  --color-ink-accent: var(--ink-accent);
-  --color-ink-border: var(--ink-border);
-
   --color-waiting: var(--status-waiting);
   --color-waiting-bg: var(--status-waiting-bg);
   --color-progress: var(--status-progress);
@@ -191,31 +368,35 @@
   --color-cancelled: var(--status-cancelled);
   --color-cancelled-bg: var(--status-cancelled-bg);
 
-  --color-mint: var(--tone-mint);
-  --color-mint-bg: var(--tone-mint-bg);
-  --color-butter: var(--tone-butter);
-  --color-butter-bg: var(--tone-butter-bg);
-  --color-lilac: var(--tone-lilac);
-  --color-lilac-bg: var(--tone-lilac-bg);
-  --color-sky: var(--tone-sky);
-  --color-sky-bg: var(--tone-sky-bg);
-
   --radius-sm: calc(var(--radius) - 8px);
   --radius-md: calc(var(--radius) - 5px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 5px);
   --radius-2xl: calc(var(--radius) + 12px);
 
-  /* Type scale — display down to metadata, with real steps between. */
-  --text-display: 2rem;
-  --text-display--line-height: 1.1;
-  --text-display--letter-spacing: -0.025em;
+  /* Type scale — display down to metadata, with real steps between.
+     Read from a few feet away on a mounted tablet, so the top of the scale is
+     larger than a desktop app would use. */
+  --text-display: 2.25rem;
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.03em;
   --text-display--font-weight: 700;
 
   --text-title: 1.375rem;
   --text-title--line-height: 1.2;
   --text-title--letter-spacing: -0.015em;
   --text-title--font-weight: 650;
+
+  /* Primary metrics: the numbers an owner reads from across the room. */
+  --text-metric: 2.75rem;
+  --text-metric--line-height: 1;
+  --text-metric--letter-spacing: -0.035em;
+  --text-metric--font-weight: 700;
+
+  --text-metric-sm: 1.75rem;
+  --text-metric-sm--line-height: 1;
+  --text-metric-sm--letter-spacing: -0.025em;
+  --text-metric-sm--font-weight: 700;
 
   --text-meta: 0.75rem;
   --text-meta--line-height: 1.35;
@@ -224,21 +405,25 @@
 
 @layer base {
   * {
-    border-color: var(--border);
+    border-color: var(--border-subtle);
   }
 
   html {
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Tells the UA to render form controls and scrollbars for the right mode. */
+  [data-mode="dark"] {
     color-scheme: dark;
   }
 
-  html.light {
+  [data-mode="light"] {
     color-scheme: light;
   }
 
   body {
-    background-color: var(--background);
-    color: var(--foreground);
+    background-color: var(--surface-canvas);
+    color: var(--text-primary);
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
     /* Tablet at the front desk: never let a rubber-band scroll hide the queue. */
@@ -256,7 +441,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--ring);
+    outline: 2px solid var(--accent-default);
     outline-offset: 2px;
   }
 
@@ -286,17 +471,18 @@
     }
   }
 
-  /* Warm hairline on hero surfaces — the premium cue, used sparingly. */
-  .edge-gold {
-    box-shadow: inset 0 1px 0 0 color-mix(in oklab, var(--rose-gold) 55%, transparent);
+  /* Hairline along the top of a hero surface. Uses the accent rather than a
+     fixed metallic, so it belongs to whichever theme is active. */
+  .edge-accent {
+    box-shadow: inset 0 1px 0 0 color-mix(in oklab, var(--accent-default) 55%, transparent);
   }
 
-  /* Raised card: a second surface step plus a soft lift. */
+  /* Raised card: a surface step plus a soft lift. */
   .surface-raised {
-    background-color: var(--surface-2);
+    background-color: var(--surface-raised);
     box-shadow:
-      0 1px 2px rgb(0 0 0 / 0.35),
-      0 8px 24px -12px rgb(0 0 0 / 0.6);
+      0 1px 2px color-mix(in oklab, var(--surface-sunken) 70%, transparent),
+      0 8px 24px -12px color-mix(in oklab, var(--surface-sunken) 85%, transparent);
   }
 
   .panel-scroll {
@@ -314,5 +500,24 @@
       transparent 2px,
       transparent 7px
     );
+  }
+
+  /* Theme swap: a short cross-fade so switching doesn't strobe. Scoped to a
+     class the provider adds for the duration of the change, because a global
+     transition on colour makes every hover feel laggy. */
+  .theme-transition,
+  .theme-transition * {
+    transition:
+      background-color 220ms ease,
+      border-color 220ms ease,
+      color 220ms ease,
+      fill 220ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .theme-transition,
+    .theme-transition * {
+      transition: none;
+    }
   }
 }

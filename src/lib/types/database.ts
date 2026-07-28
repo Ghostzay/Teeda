@@ -21,6 +21,8 @@ export type Database = {
           pay_period_anchor: string;
           open_hour: number;
           close_hour: number;
+          default_theme: string;
+          timezone: string;
         };
         Insert: {
           id?: string;
@@ -31,6 +33,8 @@ export type Database = {
           pay_period_anchor?: string;
           open_hour?: number;
           close_hour?: number;
+          default_theme?: string;
+          timezone?: string;
         };
         Update: {
           id?: string;
@@ -41,6 +45,8 @@ export type Database = {
           pay_period_anchor?: string;
           open_hour?: number;
           close_hour?: number;
+          default_theme?: string;
+          timezone?: string;
         };
         Relationships: [];
       };
@@ -54,6 +60,8 @@ export type Database = {
           last_turn_at: string | null;
           created_at: string;
           skills: Database["public"]["Enums"]["skill"][];
+          theme: string | null;
+          mode: string | null;
         };
         Insert: {
           id: string;
@@ -64,6 +72,8 @@ export type Database = {
           last_turn_at?: string | null;
           created_at?: string;
           skills?: Database["public"]["Enums"]["skill"][];
+          theme?: string | null;
+          mode?: string | null;
         };
         Update: {
           id?: string;
@@ -74,6 +84,8 @@ export type Database = {
           last_turn_at?: string | null;
           created_at?: string;
           skills?: Database["public"]["Enums"]["skill"][];
+          theme?: string | null;
+          mode?: string | null;
         };
         Relationships: [
           {
@@ -826,6 +838,55 @@ export type Database = {
       delete_shift: {
         Args: { p_id: string };
         Returns: number;
+      };
+      set_appearance: {
+        Args: { p_theme?: string | null; p_mode?: string | null };
+        Returns: Database["public"]["Tables"]["profiles"]["Row"];
+      };
+      set_salon_theme: {
+        Args: { p_theme: string };
+        Returns: Database["public"]["Tables"]["salons"]["Row"];
+      };
+      salon_today: {
+        Args: { p_salon_id?: string | null };
+        Returns: string;
+      };
+      salon_day_start: {
+        Args: { p_salon_id?: string | null };
+        Returns: string;
+      };
+      today_stats: {
+        Args: Record<string, never>;
+        Returns: {
+          waiting: number;
+          in_progress: number;
+          completed_today: number;
+          appointments_today: number;
+          checked_in: number;
+          on_shift: number;
+          day_start: string;
+        }[];
+      };
+      floor_status: {
+        Args: Record<string, never>;
+        Returns: {
+          tech_id: string;
+          full_name: string;
+          skills: Database["public"]["Enums"]["skill"][];
+          is_checked_in: boolean;
+          shift_start: string | null;
+          shift_end: string | null;
+          break_until: string | null;
+          current_job_id: string | null;
+          current_client: string | null;
+          current_service: string | null;
+          started_at: string | null;
+          expected_end: string | null;
+          jobs_today: number;
+          earnings_today: number;
+          last_turn_at: string | null;
+          queue_position: number | null;
+        }[];
       };
       schedule_overlay: {
         Args: { p_from: string; p_to: string; p_tech_id?: string | null };

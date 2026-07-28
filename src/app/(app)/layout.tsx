@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import { LogOut, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { MobileNav, Sidebar } from "@/components/app-nav";
 import { AppFrame } from "@/components/app-frame";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
-import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/user-menu";
 import { signOut } from "@/lib/actions/auth";
 import { getAuthUser, getSessionContext } from "@/lib/auth";
 import { ROLE_LABEL } from "@/lib/types";
@@ -29,28 +29,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Sidebar role={role} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ink-border bg-ink px-4 text-ink-foreground">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_20px_-4px_var(--primary)]">
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-subtle bg-surface-sunken px-4">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent-default text-on-accent">
             <Sparkles className="size-4.5" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[0.9375rem] font-semibold leading-tight">{salon.name}</p>
-            <p className="truncate text-meta text-ink-foreground/75">
-              {profile.full_name} · {ROLE_LABEL[role]}
-            </p>
+            <p className="truncate text-meta text-muted-text">{ROLE_LABEL[role]}</p>
           </div>
 
-          <form action={signOut}>
-            <Button
-              variant="ghost"
-              size="icon"
-              type="submit"
-              aria-label="Sign out"
-              className="text-ink-muted hover:bg-ink-accent hover:text-ink-foreground"
-            >
-              <LogOut className="size-4" />
-            </Button>
-          </form>
+          {/* Appearance lives in here too: a tech on a shared tablet can change
+              the theme without needing access to Settings. */}
+          <UserMenu
+            name={profile.full_name}
+            role={ROLE_LABEL[role]}
+            salon={salon.name}
+            signOut={signOut}
+          />
         </header>
 
         {/*

@@ -121,6 +121,32 @@ can't separate two hues.
 `shift_blocks.salon_id` defaults to `current_salon_id()`. There is one salon
 per install this iteration, but the column stays so multi-salon remains open.
 
+## One clock
+
+Every "today" in the product is measured against the salon's own timezone
+(`salons.timezone`), resolved by `salon_today()` and `salon_day_start()`.
+
+This used to be three different clocks: `current_date` and
+`date_trunc('day', now())` in Postgres (UTC on Supabase) and a JS
+`startOfToday()` in the app (the Node process's zone). They agree on a server
+running UTC and disagree with the salon always.
+
+The visible symptom was a header reading "0 on rotation" beside "5 done today".
+`turn_checkins.checkin_date` rolled over at UTC midnight — 7pm Eastern, 4pm
+Pacific, the middle of the evening shift — so techs silently dropped off the
+rotation and `start_job` began refusing with *"Check in for turns before taking
+a client"* on a day they had checked in, while the jobs they had already
+finished still counted.
+
+`today_stats()` now returns every dashboard count from one query on that one
+clock, including `checked_in`, so the two figures are commensurable by
+construction. They can still differ — "on rotation" is this instant, "done
+today" is the whole day — which is why the dashboard states them as separate
+lines rather than one run-on sentence.
+
+Set it under Settings → The salon day. A zone Postgres cannot resolve is
+rejected by a trigger rather than silently becoming UTC.
+
 ## Payments
 
 Recorded, not processed — nothing here moves money, and there is no Stripe
@@ -133,6 +159,12 @@ Commission is **per tech**, held in `tech_pay` rather than on the profile —
 RLS is row-level, so a rate stored on `profiles` would be readable by everyone
 who can see the roster. A manager sees every rate; a tech sees only their own.
 A blank rate falls back to the salon default, so a new hire needs no setup.
+
+`tech_amount` is `(service_amount x split) + tip_amount` — **tips are inside
+it**, never split. So `tech_amount + salon_amount = service_total + tip_total`,
+and the dashboard shows collected as the headline with to-techs and to-salon as
+its two parts, tips noted subordinate to to-techs. Rendering tips as a fourth
+peer figure made four numbers in a row that visibly did not add up.
 
 Every payment stores the rate that applied (`split_percent`) plus the
 resulting `tech_amount` and `salon_amount`. The split is stored, not derived:
@@ -290,17 +322,24 @@ configuration is needed — every route is server-rendered on demand.
 Each role gets its own short list of screens — one page, one job, so nothing
 needs long scrolling on a tablet.
 
-| Manager | Admin | Tech |
-| --- | --- | --- |
-| `/dashboard` one-pager | `/dashboard` today's ops | `/tech` My Turn |
-| `/queue` turns & queue | `/queue` | `/schedule` |
-| `/jobs` check-ins | `/jobs` | `/earnings` |
-| `/appointments` | `/appointments` | `/profile` skills |
-| `/services` pricing | `/payments` | |
-| `/staff` roster & skills | | |
-| `/earnings` reports | | |
-| `/guide` Get Started | | |
-| `/settings` | | |
+Navigation is grouped, because eleven identical rows gave the eye nothing to
+anchor on. The active item is the brightest thing in the rail — filled surface,
+heavier weight, accent edge — while its siblings sit one step down; nothing
+needed to get larger for that to work.
+
+| Group | Manager | Admin | Tech |
+| --- | --- | --- | --- |
+| **Floor** | Today · Walk-ins · Bookings · Staff hours | Today · Walk-ins · Bookings · Staff hours | My turn · My hours |
+| **Business** | Services & prices · Team · Reports | Payments | — |
+| — | Get started · Settings | — | My earnings · Profile & skills |
+
+Names split on the two axes an owner actually thinks in — clients vs staff, and
+now vs later. "Turns & Queue", "Appointments" and "Schedule" all read as the
+same concept to someone who does not already know the data model; **Walk-ins**,
+**Bookings** and **Staff hours** do not.
+
+Checking a client in is an action, not a place, so it is a primary button on
+Today and on Walk-ins rather than a nav row. `/jobs` remains as a route.
 
 `/guide` is a bilingual (EN/VI) walkthrough of every screen written for a
 non-technical manager — what each screen is for, how to add, edit and delete a
@@ -314,46 +353,120 @@ There is no Salons screen. Managing salons from inside the app was removed;
 so the multi-tenant structure is intact and a salon switcher can come back
 without a migration.
 
-`/earnings` is one route that renders by role — a manager sees the floor, a
-tech sees their own take-home. `/customers` is reachable from Settings and the
-Jobs page rather than taking a nav slot.
+`/earnings` (Reports) is one route that renders by role — a manager sees the
+floor, a tech sees their own take-home. `/customers` is reachable from Settings
+and the check-in page rather than taking a nav slot.
 
-Navigation is a navy sidebar from 768px up (both tablet orientations), and a
-bottom tab bar with a More sheet on phones.
+The sidebar shows from 768px up (both tablet orientations); phones get a bottom
+tab bar with a More sheet, where groups are flattened because a five-item bar
+has no room for headings and the order already carries the grouping.
 
-## Design system
+### Today on the floor
 
-Dark-first. `:root` is the dark theme and `.light` is the fallback, not the
-other way round — a salon tablet runs all day under warm light, and a bright
-canvas is the thing techs complain about first.
+The dashboard is a control surface, not a report. Top to bottom: the header line
+with the counts inline, the client who has waited longest **with inline assign
+buttons for every free tech plus a rotation-order "Next up"**, the technician
+rail, the rest of the waiting queue with the same inline assign, and money as a
+single strip. Assignment happens on this page; nothing here exists only to send
+you somewhere else.
 
-Surfaces are layered, never flat: a near-black `--base`, cards one to two
-steps lighter (`--surface-1` … `--surface-3`), so depth comes from the
-surfaces rather than from borders drawn on black. One saturated
-polish-inspired accent carries action and nothing else; status and category
-tags use soft pastel tones (`--tone-mint`, `--tone-butter`, `--tone-lilac`,
-`--tone-sky`) so a busy screen doesn't turn into competing brights.
+## Theming
 
-All colour lives in `src/app/globals.css` as CSS custom properties exposed to
-Tailwind through `@theme inline`, so components reference `bg-primary`,
-`text-waiting`, `bg-ink` and so on rather than raw values. Changing the palette
-is a one-file edit.
+Two independent axes, and they are never conflated:
 
-One trap worth knowing if you add tokens: a `--color-x` entry mints a
-`text-x` colour utility, which will silently shadow a same-named Tailwind font
-size. `--base` is deliberately *not* exposed as `--color-base` for that reason
-— `text-base` must stay a font size. Use `bg-background` for the base surface.
+| axis | values | who decides |
+| --- | --- | --- |
+| `data-theme` | `midnight-plum`, `noir` | the salon, overridable per user |
+| `data-mode` | `light`, `dark` | the user; defaults to `prefers-color-scheme` |
 
-Type is a real hierarchy rather than a pile of `text-sm`: `--text-display` for
-page titles, `--text-title` for section headers, `--text-meta` for the small
-print. Radii are large (`--radius: 1.125rem`) and spacing is generous, because
-every target is sized for a fingertip — no interactive element is under 44x44,
-including `size="sm"` buttons, which shed padding rather than height.
+Every theme is authored for **both** modes. There is no "dark theme" — there is
+a theme, rendered in a mode.
 
-Motion is Framer Motion, kept under 300ms and confined to page transitions,
-list stagger, press feedback and the schedule's day/week swap.
-`MotionConfig reducedMotion="user"` in `src/components/motion.tsx` means
-`prefers-reduced-motion` is honoured globally rather than per-component.
+**Midnight Plum** is deep plum with a saturated magenta accent. **Noir** is true
+neutral greys whose accent is silver-on-ink in dark and ink-on-paper in light,
+which makes the action colour the highest-contrast pair in the theme rather than
+a hue fighting the background; it doubles as the accessible baseline.
+
+### Tokens
+
+Components reference meaning, never a hue — `bg-surface-raised`, `text-muted`,
+`border-strong`, `bg-danger-bg`. There is no `bg-plum-900` and no `text-gray-400`
+anywhere in `src/`; a grep for raw Tailwind colour utilities returns nothing.
+
+The contract is documented at the top of `src/app/globals.css`: surfaces
+(canvas / raised / overlay / sunken), text (primary / secondary / muted /
+on-accent), borders (subtle / default / strong), accent (default / hover /
+subtle-bg / on-accent) and four status families, each with `fg`, `bg` and
+`border`.
+
+Adding a theme is two steps and touches no component:
+
+1. Two CSS blocks in `globals.css`, scoped to
+   `[data-theme="…"][data-mode="dark"|"light"]`, defining only the contract
+   tokens.
+2. One entry in `THEMES` in `src/lib/theme.ts`, with the swatch colours the
+   picker draws.
+
+Theme blocks define *only* the primitives. Everything else — the shadcn aliases
+(`--card`, `--muted`, `--primary`), radii, the type scale — is defined once,
+globally, in terms of those primitives, which is what keeps step 1 sufficient.
+If a new theme would need a component change, a token is missing; add the token.
+
+Two naming hazards are worth knowing, both the same bug class. A `--color-x`
+entry mints a `text-x` utility that silently shadows a same-named Tailwind font
+size or palette. `--base` is therefore *not* exposed as `--color-base`
+(`text-base` must stay a font size), and the old `--color-sky` / `--color-mint`
+tokens were removed because they shadowed Tailwind's built-in palettes.
+
+### Selection, persistence and first paint
+
+Resolution is **user override → salon default → midnight plum**, and mode
+defaults to `system`. Both are stored in Supabase (`profiles.theme`,
+`profiles.mode`, `salons.default_theme`) and mirrored to `localStorage` and
+cookies.
+
+No flash, by construction:
+
+1. The server reads the appearance cookies and renders `data-theme` /
+   `data-mode` straight onto `<html>`, so correct markup arrives already themed.
+2. A small synchronous script in `<head>` reconciles against `localStorage` —
+   which wins, being this device's own choice — and resolves `system` from
+   `prefers-color-scheme`. It runs before `<body>` exists, so anything it
+   corrects is corrected before the browser has anything to paint.
+
+The cookies are stamped at sign-in, when the profile and salon are both in hand.
+Switching theme or mode applies instantly with no reload; the Supabase write is
+fire-and-forget and deliberately does *not* use `requireSession()`, because a
+background write must never redirect the app out from under a tap.
+
+### Contrast
+
+`node scripts/contrast-audit.mjs` parses the shipped `globals.css` — not a
+duplicate of the palette — converts every OKLCH value to sRGB and checks all
+four theme × mode combinations against WCAG AA: 4.5:1 for body text, 3:1 for
+large text and UI boundaries. It exits non-zero on a regression, so it works as
+a check. `--md` emits a markdown table.
+
+`--border-subtle` is reported as decorative and exempt: it is a hairline *inside*
+a surface that never carries state or marks a control boundary, so 1.4.11 does
+not apply. `--border-default` and `--border-strong`, which do both, are held to
+3:1.
+
+## Wait escalation
+
+How long a client has waited is the number on this product that gets worse on
+its own, so it is the one that escalates:
+
+| waited | treatment |
+| --- | --- |
+| under 15 min | neutral |
+| 15–30 min | warning tokens |
+| 30–45 min | danger tokens |
+| over 45 min | danger tokens, the whole row tinted, and a pulsing marker |
+
+The mapping lives in one place — `waitStatus(minutes)` in `src/lib/wait.ts` — so
+a client who is urgent on the dashboard cannot look routine on the queue. Timers
+tick live on a 20-second interval without a refresh.
 
 ## Structure
 
@@ -374,7 +487,11 @@ src/
 │   └── globals.css
 ├── components/
 │   ├── ui/                    shadcn/ui primitives
+│   ├── dashboard/             tech rail, inline assign controls
 │   ├── schedule/              grid, lane layout, slot dialog
+│   ├── theme-provider.tsx     the two appearance axes
+│   ├── theme-picker.tsx       swatch rack, mode toggle
+│   ├── live-wait.tsx          ticking wait pills and row tints
 │   ├── turn-board.tsx         the rotation board
 │   ├── job-card.tsx           one client on the floor
 │   ├── motion.tsx             shared transitions (reduced-motion aware)
@@ -383,10 +500,15 @@ src/
 ├── lib/
 │   ├── actions/               server actions (auth, jobs, customers, …)
 │   ├── guide-content.ts       bilingual guide copy as data
+│   ├── theme.ts               theme registry + pre-paint script
+│   ├── wait.ts                minutes → escalation, in one place
 │   ├── supabase/              server / browser / admin / middleware clients
 │   ├── types/                 generated DB types + domain types
 │   ├── turn.ts                turn management
 │   ├── queries.ts             shared reads
 │   └── auth.ts                session context + guards
 └── middleware.ts              session refresh + route gating
+
+scripts/
+└── contrast-audit.mjs         WCAG AA over every theme × mode
 ```

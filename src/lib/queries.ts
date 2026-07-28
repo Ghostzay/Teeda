@@ -2,11 +2,12 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { describeSetupError } from "@/lib/setup-error";
-import { endOfToday, startOfToday } from "@/lib/format";
+
 import type {
   AppNotification,
   AppointmentWithRelations,
   Customer,
+  FloorStatus,
   JobStatus,
   JobWithRelations,
   PaymentTotals,
@@ -16,12 +17,35 @@ import type {
   ScheduleItem,
   Service,
   TechEarnings,
+  TodayStats,
   TurnCheckin,
 } from "@/lib/types";
 
 const JOB_SELECT =
   "*, customer:customers(id, name, phone), tech:profiles(id, full_name), payment:payments(*), services:job_services(*)";
 const APPOINTMENT_SELECT = "*, customer:customers(id, name, phone), tech:profiles(id, full_name)";
+
+/**
+ * When the salon's day started, as an ISO instant.
+ *
+ * Every "today" filter in this file goes through here. Previously each one
+ * computed midnight in the Node process's timezone, which is the server's
+ * opinion rather than the salon's — see `getTodayStats` for what that cost.
+ */
+async function salonDayStart(): Promise<string> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("salon_day_start", { p_salon_id: null });
+  if (error || !data) {
+    // Fall back to UTC midnight rather than failing a whole page over a clock.
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+  }
+  return data;
+}
+
+function addDay(iso: string): string {
+  return new Date(Date.parse(iso) + 24 * 60 * 60 * 1000).toISOString();
+}
 
 /**
  * Read helpers shared by the pages. RLS scopes every one of these to the
@@ -53,7 +77,10 @@ export async function getJobs(options?: {
 
   if (options?.statuses?.length) query = query.in("status", options.statuses);
   if (options?.techId) query = query.eq("tech_id", options.techId);
-  if (options?.todayOnly) query = query.gte("checked_in_at", startOfToday()).lt("checked_in_at", endOfToday());
+  if (options?.todayOnly) {
+    const start = await salonDayStart();
+    query = query.gte("checked_in_at", start).lt("checked_in_at", addDay(start));
+  }
 
   const { data, error } = await query
     .order("checked_in_at", { ascending: true })
@@ -76,7 +103,7 @@ export async function getRecentlyCompleted(limit = 8): Promise<JobWithRelations[
     .from("jobs")
     .select(JOB_SELECT)
     .eq("status", "completed")
-    .gte("completed_at", startOfToday())
+    .gte("completed_at", await salonDayStart())
     .order("completed_at", { ascending: false })
     .limit(limit);
 
@@ -200,35 +227,47 @@ export async function getTechAppointments(techId: string): Promise<{
   };
 }
 
-/** Header numbers for the manager dashboard. */
-export async function getTodayStats() {
+/**
+ * Header numbers for the manager dashboard.
+ *
+ * One RPC, one clock. This used to be four separate counts, two of which
+ * defined "today" with a JS `startOfToday()` in the server's timezone while the
+ * rotation board used `current_date` in Postgres. On a salon that isn't in UTC
+ * those disagree for several hours every evening, which is how "0 on rotation"
+ * could sit next to "5 done today". `today_stats` derives every figure from
+ * `salon_day_start()`, so the numbers on this screen are now commensurable by
+ * construction rather than by coincidence.
+ */
+export async function getTodayStats(): Promise<TodayStats> {
   const supabase = await createClient();
-  const start = startOfToday();
-  const end = endOfToday();
+  const { data, error } = await supabase.rpc("today_stats");
 
-  const [waiting, inProgress, completed, appointments] = await Promise.all([
-    supabase.from("jobs").select("id", { count: "exact", head: true }).eq("status", "waiting"),
-    supabase.from("jobs").select("id", { count: "exact", head: true }).eq("status", "in_progress"),
-    supabase
-      .from("jobs")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "completed")
-      .gte("completed_at", start)
-      .lt("completed_at", end),
-    supabase
-      .from("appointments")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "scheduled")
-      .gte("scheduled_at", start)
-      .lt("scheduled_at", end),
-  ]);
+  if (error) throw new Error(`Failed to load today's numbers: ${error.message}`);
 
-  return {
-    waiting: waiting.count ?? 0,
-    inProgress: inProgress.count ?? 0,
-    completedToday: completed.count ?? 0,
-    appointmentsToday: appointments.count ?? 0,
-  };
+  return (
+    data?.[0] ?? {
+      waiting: 0,
+      in_progress: 0,
+      completed_today: 0,
+      appointments_today: 0,
+      checked_in: 0,
+      on_shift: 0,
+      day_start: new Date().toISOString(),
+    }
+  );
+}
+
+/**
+ * One row per active tech: shift, break, current client, today's count and
+ * take. Assembled in SQL so the dashboard rail is a single round trip however
+ * large the roster gets.
+ */
+export async function getFloorStatus(): Promise<FloorStatus[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("floor_status");
+
+  if (error) throw new Error(`Failed to load the floor: ${error.message}`);
+  return data ?? [];
 }
 
 /** Today's till. Front desk only — RLS returns zeros to anyone else. */

@@ -33,6 +33,16 @@ export type TurnQueueEntry = FunctionReturns<"turn_queue">[number];
 /** Today's till, as returned by `payment_totals_today`. */
 export type PaymentTotals = FunctionReturns<"payment_totals_today">[number];
 
+/**
+ * Every count on the dashboard header, from one query on the salon's clock.
+ * Replaces four separate reads that each decided for themselves when "today"
+ * started — which is how "0 on rotation" and "5 done today" came to disagree.
+ */
+export type TodayStats = FunctionReturns<"today_stats">[number];
+
+/** One tech's card on the dashboard rail. */
+export type FloorStatus = FunctionReturns<"floor_status">[number];
+
 /** One earnings window (today / week / pay period) for a single tech. */
 export type TechEarningsRow = FunctionReturns<"tech_earnings">[number];
 

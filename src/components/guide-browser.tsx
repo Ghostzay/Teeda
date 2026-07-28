@@ -63,7 +63,7 @@ export function GuideBrowser({ sections }: { sections: GuideSection[] }) {
 
       <ViewSwap viewKey={active.id}>
         <article className="space-y-4">
-          <Card className="edge-gold surface-raised">
+          <Card className="edge-accent surface-raised">
             <CardContent className="space-y-3 p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>

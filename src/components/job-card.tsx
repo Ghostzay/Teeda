@@ -2,6 +2,7 @@ import { CalendarClock, Check, Footprints, Phone, Receipt, StickyNote, UserRound
 
 import { ActionButton, ActionSelect } from "@/components/action-button";
 import { PaymentDialog } from "@/components/payment-dialog";
+import { WaitPill } from "@/components/live-wait";
 import { STATUS_RAIL, StatusBadge } from "@/components/status-badge";
 import { Card } from "@/components/ui/card";
 import {
@@ -56,12 +57,13 @@ export function JobCard({
   const canWork = canManageFloor || isMine || (job.tech_id === null && job.status === "waiting");
   const isBooked = job.type === "appointment";
 
+  // A waiting client's duration is the one number here that gets worse on its
+  // own, so it ticks live and escalates. The others are static facts.
+  const isWaiting = job.status === "waiting";
   const elapsed =
     job.status === "in_progress"
       ? `Working ${formatDuration(job.started_at)}`
-      : job.status === "waiting"
-        ? `Waiting ${formatDuration(job.checked_in_at)}`
-        : `Finished ${formatTime(job.completed_at)}`;
+      : `Finished ${formatTime(job.completed_at)}`;
 
   const startLabel = isBooked ? "Start appointment" : "Start service";
 
@@ -75,7 +77,10 @@ export function JobCard({
             </p>
             <p className="truncate text-sm text-muted-foreground">{job.service_name}</p>
           </div>
-          <StatusBadge status={job.status} />
+          <div className="flex shrink-0 items-center gap-2">
+            {isWaiting ? <WaitPill since={job.checked_in_at} /> : null}
+            <StatusBadge status={job.status} />
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -96,7 +101,9 @@ export function JobCard({
               {formatPhone(job.customer.phone)}
             </a>
           ) : null}
-          <span className="font-medium tabular-nums">{elapsed}</span>
+          {isWaiting ? null : (
+            <span className="font-medium tabular-nums">{elapsed}</span>
+          )}
           {job.required_skills.length > 0 ? (
             <span className="rounded-full bg-muted px-2 py-0.5">
               Needs {job.required_skills.map((skill) => SKILL_LABEL[skill]).join(" + ")}

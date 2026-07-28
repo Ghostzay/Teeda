@@ -190,9 +190,9 @@ async function ScheduleContent({
 
 function Legend() {
   const items = [
-    { icon: UserCheck, label: "Shift", vi: "Ca làm", cls: "bg-primary-soft border-primary/50", hatch: false },
-    { icon: CalendarClock, label: "Appointment", vi: "Lịch hẹn", cls: "bg-sky-bg border-sky/50 text-sky", hatch: true },
-    { icon: Footprints, label: "Walk-in", vi: "Khách vãng lai", cls: "bg-butter-bg border-butter/50 text-butter", hatch: true },
+    { icon: UserCheck, label: "Shift", vi: "Ca làm", cls: "bg-accent-subtle border-accent-default/50", hatch: false },
+    { icon: CalendarClock, label: "Appointment", vi: "Lịch hẹn", cls: "bg-info-bg border-info-border text-info", hatch: true },
+    { icon: Footprints, label: "Walk-in", vi: "Khách vãng lai", cls: "bg-warning-bg border-warning-border text-warning", hatch: true },
   ];
 
   return (

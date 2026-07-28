@@ -36,7 +36,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: "dashboard",
     href: "/dashboard",
-    title: { en: "Dashboard", vi: "Tổng quan" },
+    title: { en: "Today", vi: "Hôm nay" },
     purpose: {
       en: "The one screen to glance at during a busy shift. It shows who is up next in the rotation, who is waiting, who is being served, and what has been taken today. It is read-only — you act from the other screens.",
       vi: "Màn hình để liếc nhanh khi tiệm đông. Hiển thị thợ nào tới lượt, khách đang chờ, khách đang làm, và tiền thu hôm nay. Màn hình này chỉ để xem — thao tác ở các trang khác.",
@@ -47,7 +47,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         vi: "“Tới lượt” chỉ tính thợ đã điểm danh hôm nay. Nếu thiếu ai, nghĩa là họ chưa bấm Điểm danh nhận lượt.",
       },
       {
-        en: "The money line is today only. Use Earnings & Reports for the week or the pay period.",
+        en: "The money line is today only. Use Reports for the week or the pay period.",
         vi: "Dòng tiền chỉ tính hôm nay. Xem theo tuần hoặc kỳ lương ở trang Thu nhập & Báo cáo.",
       },
     ],
@@ -55,7 +55,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: "queue",
     href: "/queue",
-    title: { en: "Turns & Queue", vi: "Lượt & Hàng chờ" },
+    title: { en: "Walk-ins", vi: "Khách vãng lai" },
     purpose: {
       en: "The rotation board and the live floor. It decides which tech gets the next walk-in, in a fair order everyone can see.",
       vi: "Bảng xoay lượt và tình trạng sàn. Quyết định thợ nào nhận khách vãng lai tiếp theo, theo thứ tự công bằng ai cũng thấy được.",
@@ -102,7 +102,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     ],
     gotchas: [
       {
-        en: "A tech with no services set can only be given work that needs no particular skill. Set their services on Staff & Techs.",
+        en: "A tech with no services set can only be given work that needs no particular skill. Set their services on Team.",
         vi: "Thợ chưa chọn dịch vụ chỉ nhận được việc không đòi hỏi kỹ năng riêng. Chọn dịch vụ cho họ ở trang Nhân viên.",
       },
       {
@@ -114,7 +114,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: "schedule",
     href: "/schedule",
-    title: { en: "Schedule", vi: "Lịch làm việc" },
+    title: { en: "Staff hours", vi: "Giờ làm của thợ" },
     purpose: {
       en: "The hour-by-hour plan. Shifts (when a tech is working) sit underneath appointments and walk-ins, so you can see at a glance who is free.",
       vi: "Kế hoạch theo giờ. Ca làm (giờ thợ đi làm) nằm dưới lịch hẹn và khách vãng lai, để bạn thấy ngay ai đang rảnh.",
@@ -157,7 +157,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: "jobs",
     href: "/jobs",
-    title: { en: "Jobs & Check-ins", vi: "Nhận khách & Công việc" },
+    title: { en: "Check in a client", vi: "Nhận khách" },
     purpose: {
       en: "Where a walk-in client is entered. It creates the client record if they're new and puts them into the rotation.",
       vi: "Nơi nhập khách vãng lai. Tự tạo hồ sơ khách nếu là khách mới và đưa họ vào hàng chờ.",
@@ -172,7 +172,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       ],
     },
     edit: {
-      en: "Once checked in, manage the client from Turns & Queue — Start, Finish or reassign there.",
+      en: "Once checked in, manage the client from Walk-ins — Start, Finish or reassign there.",
       vi: "Sau khi nhận, quản lý khách ở trang Lượt & Hàng chờ — Bắt đầu, Hoàn tất hoặc đổi thợ ở đó.",
     },
     remove: {
@@ -198,7 +198,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: "appointments",
     href: "/appointments",
-    title: { en: "Appointments", vi: "Lịch hẹn" },
+    title: { en: "Bookings", vi: "Lịch hẹn" },
     purpose: {
       en: "Bookings made in advance. Checking one in turns it into a job on the floor and blocks that time on the schedule.",
       vi: "Lịch đặt trước. Khi nhận khách, lịch hẹn thành công việc trên sàn và giữ chỗ trên lịch làm việc.",
@@ -236,7 +236,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: "services",
     href: "/services",
-    title: { en: "Services & Pricing", vi: "Dịch vụ & Bảng giá" },
+    title: { en: "Services & prices", vi: "Dịch vụ & Bảng giá" },
     purpose: {
       en: "Your price list, and the commission split. Prices set here appear at check-in, on bookings and at checkout.",
       vi: "Bảng giá của tiệm và tỉ lệ chia hoa hồng. Giá đặt ở đây sẽ hiện khi nhận khách, khi đặt lịch và khi thanh toán.",
@@ -269,7 +269,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: "staff",
     href: "/staff",
-    title: { en: "Staff & Techs", vi: "Nhân viên & Thợ" },
+    title: { en: "Team", vi: "Nhân viên & Thợ" },
     purpose: {
       en: "Everyone who can sign in, what they can do, what they earn, and which services they offer.",
       vi: "Danh sách người đăng nhập được, quyền của họ, mức hoa hồng, và dịch vụ họ làm được.",
@@ -345,7 +345,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: "earnings",
     href: "/earnings",
-    title: { en: "Earnings & Reports", vi: "Thu nhập & Báo cáo" },
+    title: { en: "Reports", vi: "Thu nhập & Báo cáo" },
     purpose: {
       en: "What each tech earned and what the salon kept, over today, this week, or the pay period. Techs see only their own numbers.",
       vi: "Mỗi thợ kiếm được bao nhiêu và tiệm giữ lại bao nhiêu, theo hôm nay, tuần này hoặc kỳ lương. Thợ chỉ xem được số của mình.",
@@ -400,7 +400,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: "tech-view",
     href: "/tech",
-    title: { en: "My Turn (tech view)", vi: "Lượt của tôi (màn hình thợ)" },
+    title: { en: "My turn (tech view)", vi: "Lượt của tôi (màn hình thợ)" },
     purpose: {
       en: "What a technician sees when they sign in: whether they're on the rotation, their place in it, the client offered to them, and what they've earned.",
       vi: "Màn hình thợ khi đăng nhập: đã vào lượt chưa, đứng thứ mấy, khách đang được giao, và thu nhập của mình.",

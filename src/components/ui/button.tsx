@@ -15,7 +15,7 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:opacity-80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-completed text-white hover:opacity-90 shadow-sm",
+        success: "bg-success-bg text-success border border-success-border hover:opacity-90 shadow-sm",
       },
       size: {
         // Sizes are tuned for a fingertip, not a mouse: every size clears a

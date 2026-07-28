@@ -1,6 +1,9 @@
-import { Scissors, Users } from "lucide-react";
+import Link from "next/link";
+import { Plus, Scissors, Users } from "lucide-react";
 
 import { JobCard } from "@/components/job-card";
+import { WaitTint } from "@/components/live-wait";
+import { Button } from "@/components/ui/button";
 import { TurnBoard } from "@/components/turn-board";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,7 +14,7 @@ import { getTurnQueue } from "@/lib/turn";
 export const dynamic = "force-dynamic";
 
 /**
- * Turns & Queue — the working screen for the floor.
+ * Walk-ins — the working screen for the floor.
  *
  * Rotation on the left (it's the product), live clients on the right. Each
  * column scrolls on its own so the board stays put while the desk works
@@ -32,11 +35,21 @@ export default async function QueuePage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Turns &amp; queue</h1>
-        <p className="text-sm text-muted-foreground">
-          Who&apos;s up, who&apos;s working, and who&apos;s waiting.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-display">Walk-ins</h1>
+          <p className="text-sm text-secondary-text">
+            Who&apos;s up, who&apos;s working, and who&apos;s waiting.
+          </p>
+        </div>
+        {/* Checking a client in is an action, not a place — so it lives on the
+            two screens where you would do it, not in the nav. */}
+        <Button asChild size="lg" className="shrink-0">
+          <Link href="/jobs">
+            <Plus className="size-4" />
+            Check in a client
+          </Link>
+        </Button>
       </header>
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
@@ -92,15 +105,16 @@ export default async function QueuePage() {
               ) : (
                 <div className="space-y-3">
                   {waiting.map((job) => (
-                    <JobCard
-                      key={job.id}
-                      job={job}
-                      techs={techs}
-                      services={services}
-                      splitPercent={session.salon.tech_split_percent}
-                      canManageFloor
-                      currentUserId={session.userId}
-                    />
+                    <WaitTint key={job.id} since={job.checked_in_at}>
+                      <JobCard
+                        job={job}
+                        techs={techs}
+                        services={services}
+                        splitPercent={session.salon.tech_split_percent}
+                        canManageFloor
+                        currentUserId={session.userId}
+                      />
+                    </WaitTint>
                   ))}
                 </div>
               )}

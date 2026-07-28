@@ -2,10 +2,12 @@ import Link from "next/link";
 import { Scissors, Users } from "lucide-react";
 
 import { ActionForm } from "@/components/action-form";
+import { AppearanceSettings } from "@/components/appearance-settings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { saveTimezone } from "@/lib/actions/appearance";
 import { updateOwnName, updateSalon } from "@/lib/actions/salon";
 import { requireManager } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
@@ -22,8 +24,8 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-display">Settings</h1>
+        <p className="text-sm text-muted-text">
           Salon since {formatDate(session.salon.created_at)}
         </p>
       </header>
@@ -66,6 +68,48 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle>Appearance</CardTitle>
+          <CardDescription>
+            Two independent choices: the theme (the palette) and the mode (light or dark). Every
+            theme is built for both.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AppearanceSettings salonTheme={session.salon.default_theme} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle>The salon day</CardTitle>
+          <CardDescription>
+            When your day starts and ends. Turn check-ins, &ldquo;done today&rdquo; and the daily
+            totals are all measured against this — if it is wrong, techs drop off the rotation
+            mid-shift.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ActionForm action={saveTimezone} resetOnSuccess={false} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="timezone">Timezone</Label>
+              <Input
+                id="timezone"
+                name="timezone"
+                defaultValue={session.salon.timezone}
+                placeholder="America/New_York"
+                required
+              />
+              <p className="text-meta text-muted-text">
+                An IANA name, such as America/New_York or America/Los_Angeles.
+              </p>
+            </div>
+            <SubmitButton>Save</SubmitButton>
+          </ActionForm>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Shortcut
