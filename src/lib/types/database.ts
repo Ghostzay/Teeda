@@ -839,6 +839,52 @@ export type Database = {
         Args: { p_id: string };
         Returns: number;
       };
+      save_availability_pattern: {
+        Args: {
+          p_tech_id: string;
+          p_weekdays: number[];
+          p_from: string;
+          p_to: string;
+          p_ends?: string | null;
+        };
+        Returns: {
+          id: string;
+          salon_id: string;
+          tech_id: string;
+          weekdays: number[];
+          start_time: string;
+          end_time: string;
+          effective_from: string;
+          effective_to: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+      };
+      clear_availability_pattern: {
+        Args: { p_tech_id?: string | null };
+        Returns: number;
+      };
+      availability_patterns_for_salon: {
+        Args: Record<string, never>;
+        Returns: {
+          tech_id: string;
+          tech_name: string;
+          weekdays: number[];
+          start_time: string;
+          end_time: string;
+          effective_to: string | null;
+          editable: boolean;
+        }[];
+      };
+      unmarked_techs: {
+        Args: { p_days?: number };
+        Returns: {
+          tech_id: string;
+          full_name: string;
+          has_pattern: boolean;
+          days_marked: number;
+        }[];
+      };
       month_availability: {
         Args: { p_from: string; p_to: string };
         Returns: {

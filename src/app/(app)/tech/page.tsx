@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Coffee, Wallet } from "lucide-react";
 
+import { CalendarNudge } from "@/components/schedule/calendar-nudge";
 import { CheckInCard } from "@/components/checkin-card";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { JobCard } from "@/components/job-card";
@@ -16,6 +17,7 @@ import {
   getTechAppointments,
   getTechCurrentJob,
   getTechEarnings,
+  getUnmarkedTechs,
 } from "@/lib/queries";
 import { getTurnPosition, getTurnQueue } from "@/lib/turn";
 import { cn } from "@/lib/utils";
@@ -33,17 +35,27 @@ export default async function TechPage() {
   const session = await requireSession();
   const { userId, profile } = session;
 
-  const [isCheckedIn, currentJob, queue, position, myWaiting, appointments, earnings, notifications] =
-    await Promise.all([
-      amICheckedIn(),
-      getTechCurrentJob(userId),
-      getTurnQueue(session.salon.id),
-      getTurnPosition(userId, session.salon.id),
-      getJobs({ statuses: ["waiting"], techId: userId }),
-      getTechAppointments(userId),
-      getTechEarnings(userId),
-      getNotifications(5),
-    ]);
+  const [
+    isCheckedIn,
+    currentJob,
+    queue,
+    position,
+    myWaiting,
+    appointments,
+    earnings,
+    notifications,
+    unmarked,
+  ] = await Promise.all([
+    amICheckedIn(),
+    getTechCurrentJob(userId),
+    getTurnQueue(session.salon.id),
+    getTurnPosition(userId, session.salon.id),
+    getJobs({ statuses: ["waiting"], techId: userId }),
+    getTechAppointments(userId),
+    getTechEarnings(userId),
+    getNotifications(5),
+    getUnmarkedTechs(7),
+  ]);
 
   const isBusy = Boolean(currentJob);
   const isNextUp =
@@ -82,6 +94,11 @@ export default async function TechPage() {
           </Link>
         ) : null}
       </header>
+
+      {/* A calendar nobody fills in is worse than none — the desk checks it
+          twice, finds it empty, and stops looking. Ask here, where the only
+          person who can fix it already is. */}
+      <CalendarNudge techs={unmarked} self={{ id: userId }} />
 
       <CheckInCard isCheckedIn={isCheckedIn} />
 

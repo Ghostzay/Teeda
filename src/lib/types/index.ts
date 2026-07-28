@@ -46,6 +46,26 @@ export type FloorStatus = FunctionReturns<"floor_status">[number];
 /** One tech's entry for one day in the month view. */
 export type DayAvailability = FunctionReturns<"month_availability">[number];
 
+/** A tech's usual week — the days they normally work. */
+export type AvailabilityPattern = FunctionReturns<"availability_patterns_for_salon">[number];
+
+/** A tech with nothing on the calendar in the window asked about. */
+export type UnmarkedTech = FunctionReturns<"unmarked_techs">[number];
+
+/**
+ * ISO weekday numbering, matching Postgres `extract(isodow)`. Monday-first
+ * because that is how a rota is read, and because the month grid is too.
+ */
+export const WEEKDAYS: { value: number; short: string; long: string }[] = [
+  { value: 1, short: "Mon", long: "Monday" },
+  { value: 2, short: "Tue", long: "Tuesday" },
+  { value: 3, short: "Wed", long: "Wednesday" },
+  { value: 4, short: "Thu", long: "Thursday" },
+  { value: 5, short: "Fri", long: "Friday" },
+  { value: 6, short: "Sat", long: "Saturday" },
+  { value: 7, short: "Sun", long: "Sunday" },
+];
+
 /** One earnings window (today / week / pay period) for a single tech. */
 export type TechEarningsRow = FunctionReturns<"tech_earnings">[number];
 

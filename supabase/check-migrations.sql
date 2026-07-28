@@ -44,6 +44,10 @@ from (
     (14, '20260728130000_theming.sql',
          exists (select 1 from information_schema.columns
                  where table_schema = 'public' and table_name = 'salons'
-                   and column_name = 'timezone'))
+                   and column_name = 'timezone')),
+    (15, '20260728140000_availability.sql',
+         to_regprocedure('public.month_availability(date, date)') is not null),
+    (16, '20260728150000_recurring_availability.sql',
+         to_regclass('public.availability_patterns') is not null)
 ) as t (step, file, applied)
 order by step;

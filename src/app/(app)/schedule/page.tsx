@@ -2,12 +2,20 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { AlertTriangle, CalendarClock, CalendarDays, Footprints, UserCheck } from "lucide-react";
 
+import { CalendarNudge } from "@/components/schedule/calendar-nudge";
 import { MonthNavigator } from "@/components/schedule/month-navigator";
+import { UsualWeek } from "@/components/schedule/usual-week";
 import { ScheduleBoard, ScheduleBoardSkeleton } from "@/components/schedule/schedule-board";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth";
 import { formatDate, toDateInputValue } from "@/lib/format";
-import { getActiveTechs, getMonthAvailability, getScheduleOverlay } from "@/lib/queries";
+import {
+  getActiveTechs,
+  getAvailabilityPatterns,
+  getMonthAvailability,
+  getScheduleOverlay,
+  getUnmarkedTechs,
+} from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -94,10 +102,11 @@ async function ScheduleContent({
     const gridEnd = new Date(gridStart);
     gridEnd.setDate(gridStart.getDate() + 42);
 
-    const { days, error } = await getMonthAvailability(
-      toDateInputValue(gridStart),
-      toDateInputValue(gridEnd),
-    );
+    const [{ days, error }, patterns, unmarked] = await Promise.all([
+      getMonthAvailability(toDateInputValue(gridStart), toDateInputValue(gridEnd)),
+      getAvailabilityPatterns(),
+      getUnmarkedTechs(7),
+    ]);
 
     const marked = new Set(days.filter((entry) => entry.kind === "shift").map((e) => e.tech_id));
 
@@ -109,6 +118,18 @@ async function ScheduleContent({
           linkTo={linkTo}
           subtitle={`${anchor.toLocaleDateString("en-US", { month: "long", year: "numeric" })} · ${marked.size} of ${techs.length} ${techs.length === 1 ? "tech has" : "techs have"} days marked`}
         />
+        <CalendarNudge
+          techs={unmarked}
+          self={session.canManageFloor ? undefined : { id: session.userId }}
+        />
+
+        <UsualWeek
+          patterns={patterns}
+          techs={techs}
+          currentUserId={session.userId}
+          canManageFloor={session.canManageFloor}
+        />
+
         {error ? (
           <ScheduleError message={error} />
         ) : (

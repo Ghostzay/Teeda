@@ -6,6 +6,7 @@ import { describeSetupError } from "@/lib/setup-error";
 import type {
   AppNotification,
   AppointmentWithRelations,
+  AvailabilityPattern,
   Customer,
   DayAvailability,
   FloorStatus,
@@ -20,6 +21,7 @@ import type {
   TechEarnings,
   TodayStats,
   TurnCheckin,
+  UnmarkedTech,
 } from "@/lib/types";
 
 const JOB_SELECT =
@@ -275,6 +277,27 @@ export async function getMonthAvailability(
 
   if (error) return { days: [], error: describeSetupError(error) };
   return { days: data ?? [], error: null };
+}
+
+/** Every tech's usual week, for the pattern editor and the read-back. */
+export async function getAvailabilityPatterns(): Promise<AvailabilityPattern[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("availability_patterns_for_salon");
+  if (error) return [];
+  return data ?? [];
+}
+
+/**
+ * Who has nothing on the calendar in the next `days`.
+ *
+ * The month view only helps if it gets filled in, and nobody remembers to fill
+ * in a calendar. This is what lets a screen say so to the person who can fix it.
+ */
+export async function getUnmarkedTechs(days = 7): Promise<UnmarkedTech[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("unmarked_techs", { p_days: days });
+  if (error) return [];
+  return data ?? [];
 }
 
 /**

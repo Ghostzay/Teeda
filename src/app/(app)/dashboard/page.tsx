@@ -5,6 +5,7 @@ import { AssignControls, type FreeTech } from "@/components/dashboard/assign-con
 import { NeedsAttention, type AttentionInput } from "@/components/dashboard/needs-attention";
 import { WhatsComing, type ComingBooking } from "@/components/dashboard/whats-coming";
 import { JobCard } from "@/components/job-card";
+import { CalendarNudge } from "@/components/schedule/calendar-nudge";
 import { WaitPill, WaitTint } from "@/components/live-wait";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { TurnBoard } from "@/components/turn-board";
@@ -21,6 +22,7 @@ import {
   getRecentlyCompleted,
   getServices,
   getTodayStats,
+  getUnmarkedTechs,
 } from "@/lib/queries";
 import { getTurnQueue } from "@/lib/turn";
 
@@ -47,8 +49,8 @@ export default async function DashboardPage() {
   const dayEnd = new Date(dayStart);
   dayEnd.setDate(dayEnd.getDate() + 1);
 
-  const [stats, jobs, queue, floor, finished, totals, techs, services, bookings] = await Promise.all(
-    [
+  const [stats, jobs, queue, floor, finished, totals, techs, services, bookings, unmarked] =
+    await Promise.all([
       getTodayStats(),
       getActiveJobs(),
       getTurnQueue(session.salon.id),
@@ -58,8 +60,8 @@ export default async function DashboardPage() {
       getActiveTechs(),
       getServices(),
       getAppointments({ start: dayStart.toISOString(), end: dayEnd.toISOString() }),
-    ],
-  );
+      getUnmarkedTechs(7),
+    ]);
 
   // `getActiveJobs` already orders by check-in, so the first is the longest wait.
   const waiting = jobs.filter((job) => job.status === "waiting");
@@ -135,6 +137,8 @@ export default async function DashboardPage() {
       </header>
 
       <NeedsAttention input={attention} />
+
+      <CalendarNudge techs={unmarked} />
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
         {/* The working column. */}
