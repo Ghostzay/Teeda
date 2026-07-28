@@ -36,7 +36,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: "dashboard",
     href: "/dashboard",
-    title: { en: "Today", vi: "Hôm nay" },
+    title: { en: "Dashboard — at a glance", vi: "Trang chính — tổng quan" },
     purpose: {
       en: "The one screen to glance at during a busy shift. It shows who is up next in the rotation, who is waiting, who is being served, and what has been taken today. It is read-only — you act from the other screens.",
       vi: "Màn hình để liếc nhanh khi tiệm đông. Hiển thị thợ nào tới lượt, khách đang chờ, khách đang làm, và tiền thu hôm nay. Màn hình này chỉ để xem — thao tác ở các trang khác.",
@@ -54,8 +54,8 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   },
   {
     id: "queue",
-    href: "/queue",
-    title: { en: "Walk-ins", vi: "Khách vãng lai" },
+    href: "/dashboard",
+    title: { en: "Dashboard", vi: "Trang chính" },
     purpose: {
       en: "The rotation board and the live floor. It decides which tech gets the next walk-in, in a fair order everyone can see.",
       vi: "Bảng xoay lượt và tình trạng sàn. Quyết định thợ nào nhận khách vãng lai tiếp theo, theo thứ tự công bằng ai cũng thấy được.",

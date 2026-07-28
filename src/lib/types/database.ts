@@ -839,6 +839,35 @@ export type Database = {
         Args: { p_id: string };
         Returns: number;
       };
+      month_availability: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          day: string;
+          tech_id: string;
+          tech_name: string;
+          kind: Database["public"]["Enums"]["shift_kind"];
+          starts_at: string;
+          ends_at: string;
+          note: string | null;
+          editable: boolean;
+          booking_count: number;
+        }[];
+      };
+      set_day_availability: {
+        Args: {
+          p_tech_id: string;
+          p_day: string;
+          p_from: string;
+          p_to: string;
+          p_kind?: string;
+          p_note?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["shift_blocks"]["Row"];
+      };
+      clear_day_availability: {
+        Args: { p_tech_id: string; p_day: string };
+        Returns: number;
+      };
       set_appearance: {
         Args: { p_theme?: string | null; p_mode?: string | null };
         Returns: Database["public"]["Tables"]["profiles"]["Row"];

@@ -41,6 +41,7 @@ export function TurnBoard({
         </CardTitle>
         <span className="text-xs font-medium text-muted-foreground">
           {onRotation.length} checked in today
+          {showFloorControls && offRotation.length > 0 ? ` · ${offRotation.length} not in` : ""}
         </span>
       </CardHeader>
 
@@ -88,7 +89,13 @@ export function TurnBoard({
           </ul>
         )}
 
-        {offRotation.length > 0 ? (
+        {/*
+          Who is *not* on today's rotation is a front-desk concern: the list is
+          only there so someone with the authority to check people in can see
+          who is missing. A tech can neither act on it nor be helped by it, so
+          for them it is a screen full of names that are not in the running.
+        */}
+        {showFloorControls && offRotation.length > 0 ? (
           <div className="border-t border-border">
             <p className="bg-muted px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Not checked in today

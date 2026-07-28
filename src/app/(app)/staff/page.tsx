@@ -4,6 +4,7 @@ import { UserPlus, Users } from "lucide-react";
 import { ActionButton, ActionSelect } from "@/components/action-button";
 import { ActionForm } from "@/components/action-form";
 import { CommissionEditor } from "@/components/commission-editor";
+import { TechRail } from "@/components/dashboard/tech-rail";
 import { SkillsEditor } from "@/components/skills-editor";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,7 @@ import {
 } from "@/lib/actions/salon";
 import { requireManager } from "@/lib/auth";
 import { formatDate, formatMoney, formatRelative } from "@/lib/format";
-import { getCommissionRates, getStaff, getTodayCheckins } from "@/lib/queries";
+import { getCommissionRates, getFloorStatus, getStaff, getTodayCheckins } from "@/lib/queries";
 import { ROLE_DESCRIPTION, ROLE_LABEL, SKILL_LABEL, type UserRole } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -28,10 +29,11 @@ export const dynamic = "force-dynamic";
 /** Staff & techs — the roster, their roles, skills and today's check-in state. */
 export default async function StaffPage() {
   const session = await requireManager();
-  const [staff, checkins, rates] = await Promise.all([
+  const [staff, checkins, rates, floor] = await Promise.all([
     getStaff(),
     getTodayCheckins(),
     getCommissionRates(),
+    getFloorStatus(),
   ]);
   const techs = staff.filter((person) => person.role === "tech");
   const houseRate = session.salon.tech_split_percent;
@@ -48,19 +50,34 @@ export default async function StaffPage() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Staff &amp; techs</h1>
+          <h1 className="text-display">Team</h1>
           <p className="text-sm text-muted-foreground">
             {staff.length} on the roster · {techs.filter((t) => checkins.get(t.id)?.checked_out_at === null).length}{" "}
             checked in today
           </p>
         </div>
         <Link
-          href="/queue"
-          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          href="/dashboard"
+          className="min-h-11 text-sm font-medium text-accent-default underline-offset-4 hover:underline"
         >
           Turn rotation →
         </Link>
       </header>
+
+      {/*
+        The live floor. This used to sit on the dashboard, where it filled the
+        screen with cards an owner does not need while she is placing a client.
+        Everything about staff belongs in one place, and this is it.
+      */}
+      <section aria-label="On the floor now" className="space-y-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-title">On the floor now</h2>
+          <span className="text-meta text-muted-text tabular-nums">
+            {floor.filter((tech) => tech.is_checked_in).length} of {floor.length} checked in
+          </span>
+        </div>
+        <TechRail techs={floor} />
+      </section>
 
       <Card className="edge-accent">
         <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">

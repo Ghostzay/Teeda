@@ -40,6 +40,9 @@ export type NavGroup = {
 };
 
 /**
+ * The Dashboard *is* the walk-in queue — the two were separate screens and the
+ * abstract one restated numbers the working one already showed.
+ *
  * Names are chosen to separate two axes a non-technical owner actually thinks
  * in — clients vs staff, and now vs later:
  *
@@ -54,8 +57,7 @@ const MANAGER_NAV: NavGroup[] = [
   {
     label: "Floor",
     items: [
-      { href: "/dashboard", label: "Today", short: "Today", icon: LayoutDashboard },
-      { href: "/queue", label: "Walk-ins", short: "Walk-ins", icon: Users },
+      { href: "/dashboard", label: "Dashboard", short: "Today", icon: LayoutDashboard },
       { href: "/appointments", label: "Bookings", short: "Booked", icon: CalendarDays },
       { href: "/schedule", label: "Staff hours", short: "Hours", icon: CalendarClock },
     ],
@@ -81,8 +83,7 @@ const ADMIN_NAV: NavGroup[] = [
   {
     label: "Floor",
     items: [
-      { href: "/dashboard", label: "Today", short: "Today", icon: LayoutDashboard },
-      { href: "/queue", label: "Walk-ins", short: "Walk-ins", icon: Users },
+      { href: "/dashboard", label: "Dashboard", short: "Today", icon: LayoutDashboard },
       { href: "/appointments", label: "Bookings", short: "Booked", icon: CalendarDays },
       { href: "/schedule", label: "Staff hours", short: "Hours", icon: CalendarClock },
     ],

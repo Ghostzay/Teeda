@@ -8,7 +8,7 @@ import type { ActionState } from "@/lib/types";
 
 function revalidateSchedule() {
   revalidatePath("/schedule");
-  revalidatePath("/queue");
+  revalidatePath("/dashboard");
   revalidatePath("/dashboard");
   revalidatePath("/tech");
   revalidatePath("/appointments");

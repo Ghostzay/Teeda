@@ -43,6 +43,9 @@ export type TodayStats = FunctionReturns<"today_stats">[number];
 /** One tech's card on the dashboard rail. */
 export type FloorStatus = FunctionReturns<"floor_status">[number];
 
+/** One tech's entry for one day in the month view. */
+export type DayAvailability = FunctionReturns<"month_availability">[number];
+
 /** One earnings window (today / week / pay period) for a single tech. */
 export type TechEarningsRow = FunctionReturns<"tech_earnings">[number];
 

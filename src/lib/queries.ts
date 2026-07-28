@@ -7,6 +7,7 @@ import type {
   AppNotification,
   AppointmentWithRelations,
   Customer,
+  DayAvailability,
   FloorStatus,
   JobStatus,
   JobWithRelations,
@@ -255,6 +256,25 @@ export async function getTodayStats(): Promise<TodayStats> {
       day_start: new Date().toISOString(),
     }
   );
+}
+
+/**
+ * A month of availability, already rolled up per tech per day.
+ *
+ * Dates are plain `yyyy-mm-dd` strings on purpose: the month grid reasons in
+ * salon-local days, and the server has already resolved them in the salon's
+ * timezone. Turning them back into Date objects here would re-introduce the
+ * browser's timezone into a question that has nothing to do with it.
+ */
+export async function getMonthAvailability(
+  from: string,
+  to: string,
+): Promise<{ days: DayAvailability[]; error: string | null }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("month_availability", { p_from: from, p_to: to });
+
+  if (error) return { days: [], error: describeSetupError(error) };
+  return { days: data ?? [], error: null };
 }
 
 /**
