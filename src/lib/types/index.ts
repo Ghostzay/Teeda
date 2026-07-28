@@ -52,6 +52,9 @@ export type AvailabilityPattern = FunctionReturns<"availability_patterns_for_sal
 /** A tech with nothing on the calendar in the window asked about. */
 export type UnmarkedTech = FunctionReturns<"unmarked_techs">[number];
 
+/** Today's takings against the same weekday last week. */
+export type TakingsComparison = FunctionReturns<"takings_comparison">[number];
+
 /**
  * ISO weekday numbering, matching Postgres `extract(isodow)`. Monday-first
  * because that is how a rota is read, and because the month grid is too.

@@ -48,6 +48,10 @@ from (
     (15, '20260728140000_availability.sql',
          to_regprocedure('public.month_availability(date, date)') is not null),
     (16, '20260728150000_recurring_availability.sql',
-         to_regclass('public.availability_patterns') is not null)
+         to_regclass('public.availability_patterns') is not null),
+    (17, '20260728160000_dashboard_layout.sql',
+         exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'profiles'
+                   and column_name = 'dashboard_layout'))
 ) as t (step, file, applied)
 order by step;

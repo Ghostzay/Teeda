@@ -23,6 +23,7 @@ export type Database = {
           close_hour: number;
           default_theme: string;
           timezone: string;
+          default_dashboard_layout: Json | null;
         };
         Insert: {
           id?: string;
@@ -35,6 +36,7 @@ export type Database = {
           close_hour?: number;
           default_theme?: string;
           timezone?: string;
+          default_dashboard_layout?: Json | null;
         };
         Update: {
           id?: string;
@@ -47,6 +49,7 @@ export type Database = {
           close_hour?: number;
           default_theme?: string;
           timezone?: string;
+          default_dashboard_layout?: Json | null;
         };
         Relationships: [];
       };
@@ -62,6 +65,7 @@ export type Database = {
           skills: Database["public"]["Enums"]["skill"][];
           theme: string | null;
           mode: string | null;
+          dashboard_layout: Json | null;
         };
         Insert: {
           id: string;
@@ -74,6 +78,7 @@ export type Database = {
           skills?: Database["public"]["Enums"]["skill"][];
           theme?: string | null;
           mode?: string | null;
+          dashboard_layout?: Json | null;
         };
         Update: {
           id?: string;
@@ -86,6 +91,7 @@ export type Database = {
           skills?: Database["public"]["Enums"]["skill"][];
           theme?: string | null;
           mode?: string | null;
+          dashboard_layout?: Json | null;
         };
         Relationships: [
           {
@@ -838,6 +844,24 @@ export type Database = {
       delete_shift: {
         Args: { p_id: string };
         Returns: number;
+      };
+      set_dashboard_layout: {
+        Args: { p_layout: Json | null };
+        Returns: Database["public"]["Tables"]["profiles"]["Row"];
+      };
+      set_salon_dashboard_layout: {
+        Args: { p_layout: Json | null };
+        Returns: Database["public"]["Tables"]["salons"]["Row"];
+      };
+      takings_comparison: {
+        Args: Record<string, never>;
+        Returns: {
+          today_total: number;
+          today_clients: number;
+          compared_total: number;
+          compared_clients: number;
+          compared_day: string;
+        }[];
       };
       save_availability_pattern: {
         Args: {

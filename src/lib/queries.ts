@@ -19,6 +19,7 @@ import type {
   ScheduleItem,
   Service,
   TechEarnings,
+  TakingsComparison,
   TodayStats,
   TurnCheckin,
   UnmarkedTech,
@@ -277,6 +278,28 @@ export async function getMonthAvailability(
 
   if (error) return { days: [], error: describeSetupError(error) };
   return { days: data ?? [], error: null };
+}
+
+/**
+ * Today's takings against the same weekday last week.
+ *
+ * Same weekday, not yesterday: a salon's week has a shape, and comparing a
+ * Tuesday to a Saturday would just produce an alarming red arrow every Monday.
+ */
+export async function getTakingsComparison(): Promise<TakingsComparison> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("takings_comparison");
+
+  if (error || !data?.[0]) {
+    return {
+      today_total: 0,
+      today_clients: 0,
+      compared_total: 0,
+      compared_clients: 0,
+      compared_day: new Date().toISOString().slice(0, 10),
+    };
+  }
+  return data[0];
 }
 
 /** Every tech's usual week, for the pattern editor and the read-back. */
