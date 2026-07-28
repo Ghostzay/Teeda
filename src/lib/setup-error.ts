@@ -14,10 +14,11 @@ export function describeSetupError(error: { message?: string; code?: string }): 
 
   if (missingSchema) {
     return (
-      "The database isn't set up yet. Run the SQL in supabase/migrations/ against your " +
-      "project (Supabase → SQL Editor, or `supabase db push`), then try again."
+      "This screen needs a database migration that hasn't been applied yet. Run every " +
+      "file in supabase/migrations/ against your project (Supabase → SQL Editor, or " +
+      "`supabase db push`), then reload."
     );
   }
 
-  return message || "Could not create the salon.";
+  return message || "Something went wrong loading this data.";
 }

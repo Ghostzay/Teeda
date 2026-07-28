@@ -11,6 +11,7 @@ export type Appointment = Tables<"appointments">;
 export type Payment = Tables<"payments">;
 export type TechPay = Tables<"tech_pay">;
 export type ScheduleBlock = Tables<"schedule_blocks">;
+export type ShiftBlock = Tables<"shift_blocks">;
 export type Service = Tables<"services">;
 export type JobService = Tables<"job_services">;
 export type TurnCheckin = Tables<"turn_checkins">;
@@ -23,6 +24,7 @@ export type AppointmentStatus = Enums<"appointment_status">;
 export type PaymentMethod = Enums<"payment_method">;
 export type Skill = Enums<"skill">;
 export type BlockKind = Enums<"block_kind">;
+export type ShiftKind = Enums<"shift_kind">;
 export type NotificationType = Enums<"notification_type">;
 
 /** One row of the rotation board, as returned by the `turn_queue` RPC. */
@@ -39,6 +41,18 @@ export type SalonEarningsRow = FunctionReturns<"salon_earnings">[number];
 
 /** A block on the schedule, with the tech's name already joined. */
 export type ScheduleEntry = FunctionReturns<"schedule_for_range">[number];
+
+/** One item drawn on the schedule grid, from any of the three layers. */
+export type ScheduleItem = FunctionReturns<"schedule_overlay">[number];
+
+/** Which data source an item came from. Drives its fill treatment. */
+export type ScheduleLayer = "shift" | "appointment" | "walkin";
+
+export const SHIFT_KIND_LABEL: Record<ShiftKind, { en: string; vi: string }> = {
+  shift: { en: "Working", vi: "Đang làm" },
+  break: { en: "Break", vi: "Nghỉ giải lao" },
+  time_off: { en: "Time off", vi: "Nghỉ phép" },
+};
 
 export const BLOCK_KIND_LABEL: Record<BlockKind, string> = {
   appointment: "Appointment",
@@ -122,7 +136,7 @@ export const ROLE_LABEL: Record<UserRole, string> = {
 };
 
 export const ROLE_DESCRIPTION: Record<UserRole, string> = {
-  super_admin: "Everything a manager can do, plus creating new salons.",
+  super_admin: "The salon owner. Same access as a manager.",
   manager: "Full access, including settings, team and takings.",
   admin: "Runs the floor — check-ins, jobs, queue and payments. No settings.",
   tech: "Their own turn, clients and appointments.",

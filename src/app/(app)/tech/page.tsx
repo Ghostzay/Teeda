@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Coffee, Wallet } from "lucide-react";
 
 import { CheckInCard } from "@/components/checkin-card";
+import { Stagger, StaggerItem } from "@/components/motion";
 import { JobCard } from "@/components/job-card";
 import { TurnBoard } from "@/components/turn-board";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -172,19 +173,22 @@ export default async function TechPage() {
           <CardHeader className="pb-3">
             <CardTitle>Your next client</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {myWaiting.map((job) => (
-              <JobCard
-                key={job.id}
+          <CardContent>
+            <Stagger className="space-y-3">
+              {myWaiting.map((job) => (
+                <StaggerItem key={job.id}>
+                  <JobCard
                 job={job}
                 techs={[]}
                 services={[]}
                 splitPercent={session.salon.tech_split_percent}
                 canManageFloor={false}
                 currentUserId={userId}
-                showTurnActions
-              />
-            ))}
+                    showTurnActions
+                  />
+                </StaggerItem>
+              ))}
+            </Stagger>
           </CardContent>
         </Card>
       ) : null}

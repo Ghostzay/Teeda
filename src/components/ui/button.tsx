@@ -18,9 +18,11 @@ const buttonVariants = cva(
         success: "bg-completed text-white hover:opacity-90 shadow-sm",
       },
       size: {
-        // Sizes are tuned for tablets: `default` is already a 44px touch target.
+        // Sizes are tuned for a fingertip, not a mouse: every size clears a
+        // 44x44 touch target. `sm` is smaller in weight (padding, not height) —
+        // shrinking it below 44px would make it a miss on a mounted tablet.
         default: "h-11 px-4 py-2",
-        sm: "h-9 rounded-md px-3 text-sm",
+        sm: "h-11 min-w-11 rounded-lg px-3.5 text-sm",
         lg: "h-14 rounded-xl px-8 text-base",
         icon: "h-11 w-11",
       },

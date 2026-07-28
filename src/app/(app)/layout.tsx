@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { LogOut, Sparkles } from "lucide-react";
 
 import { MobileNav, Sidebar } from "@/components/app-nav";
+import { AppFrame } from "@/components/app-frame";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/lib/actions/auth";
@@ -29,12 +30,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ink-border bg-ink px-4 text-ink-foreground">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Sparkles className="size-4" />
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_0_20px_-4px_var(--primary)]">
+            <Sparkles className="size-4.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold leading-tight">{salon.name}</p>
-            <p className="truncate text-xs text-ink-muted">
+            <p className="truncate text-[0.9375rem] font-semibold leading-tight">{salon.name}</p>
+            <p className="truncate text-meta text-ink-foreground/75">
               {profile.full_name} · {ROLE_LABEL[role]}
             </p>
           </div>
@@ -56,8 +57,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           The frame owns the height; each page decides what scrolls inside it.
           That's what keeps a dashboard from turning into a long scroll.
         */}
-        <main className="panel-scroll flex-1 px-4 pb-24 pt-4 md:pb-6">
-          <div className="mx-auto w-full max-w-6xl">{children}</div>
+        <main className="panel-scroll flex-1 px-4 pb-24 pt-5 md:px-6 md:pb-8">
+          <AppFrame>{children}</AppFrame>
         </main>
       </div>
 

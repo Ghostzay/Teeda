@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MoreHorizontal, X } from "lucide-react";
 
+import { motion } from "@/components/motion";
+
 import { cn } from "@/lib/utils";
 import { navForRole } from "@/lib/navigation";
 import type { UserRole } from "@/lib/types";
@@ -29,7 +31,7 @@ export function Sidebar({ role }: { role: UserRole }) {
   const items = navForRole(role);
 
   return (
-    <nav className="hidden w-60 shrink-0 flex-col gap-1 border-r border-ink-border bg-ink p-3 md:flex">
+    <nav className="hidden w-[16.5rem] shrink-0 flex-col gap-1.5 border-r border-ink-border bg-ink p-3 md:flex">
       {items.map(({ href, label, icon: Icon }) => {
         const active = isActive(href);
         return (
@@ -38,13 +40,24 @@ export function Sidebar({ role }: { role: UserRole }) {
             href={href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
+              // 15px / medium, and a 48px row: readable across a counter,
+              // not just at desk distance.
+              "relative flex min-h-12 items-center gap-3.5 rounded-lg pl-5 pr-3 text-[0.9375rem] font-medium leading-none transition-colors",
               active
-                ? "bg-primary text-primary-foreground shadow-sm"
+                // Filled surface *and* an accent edge marker — the active item
+                // is never signalled by colour alone.
+                ? "bg-ink-accent text-ink-foreground font-semibold"
                 : "text-ink-muted hover:bg-ink-accent hover:text-ink-foreground",
             )}
           >
-            <Icon className="size-5 shrink-0" />
+            {active ? (
+              <motion.span
+                layoutId="nav-active-edge"
+                className="absolute inset-y-1.5 left-0 w-1 rounded-full bg-primary"
+                transition={{ duration: 0.2, ease: [0.22, 0.61, 0.36, 1] }}
+              />
+            ) : null}
+            <Icon className={cn("size-[1.15rem] shrink-0", active && "text-primary")} />
             <span className="truncate">{label}</span>
           </Link>
         );
@@ -122,14 +135,14 @@ export function MobileNav({ role }: { role: UserRole }) {
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
-                  active ? "text-primary-foreground" : "text-ink-muted",
+                  "flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[0.75rem] font-semibold transition-colors",
+                  active ? "text-primary" : "text-ink-muted",
                 )}
               >
                 <span
                   className={cn(
-                    "flex size-8 items-center justify-center rounded-lg",
-                    active && "bg-primary",
+                    "flex size-9 items-center justify-center rounded-lg",
+                    active && "bg-primary text-primary-foreground",
                   )}
                 >
                   <Icon className="size-5" />
@@ -144,14 +157,14 @@ export function MobileNav({ role }: { role: UserRole }) {
               type="button"
               onClick={() => setMoreOpen(true)}
               className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium",
-                overflowActive ? "text-primary-foreground" : "text-ink-muted",
+                "flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[0.75rem] font-semibold",
+                overflowActive ? "text-primary" : "text-ink-muted",
               )}
             >
               <span
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-lg",
-                  overflowActive && "bg-primary",
+                  "flex size-9 items-center justify-center rounded-lg",
+                  overflowActive && "bg-primary text-primary-foreground",
                 )}
               >
                 <MoreHorizontal className="size-5" />

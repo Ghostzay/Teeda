@@ -45,21 +45,3 @@ export async function setCommission(_prev: ActionState, formData: FormData): Pro
   };
 }
 
-/** Provision another salon. Owner only. */
-export async function createSalon(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireManager();
-  if (!session.isSuperAdmin) {
-    return { ok: false, error: "Only the salon owner can create new salons." };
-  }
-
-  const name = String(formData.get("name") ?? "").trim();
-  if (!name) return { ok: false, error: "Give the salon a name." };
-
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("create_salon_as_owner", { p_name: name });
-
-  if (error) return { ok: false, error: error.message };
-
-  revalidatePath("/salons");
-  return { ok: true, message: `${name} created.` };
-}

@@ -577,6 +577,46 @@ export type Database = {
           },
         ];
       };
+      shift_blocks: {
+        Row: {
+          id: string;
+          salon_id: string;
+          tech_id: string;
+          kind: Database["public"]["Enums"]["shift_kind"];
+          starts_at: string;
+          ends_at: string;
+          note: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          salon_id?: string;
+          tech_id: string;
+          kind?: Database["public"]["Enums"]["shift_kind"];
+          starts_at: string;
+          ends_at: string;
+          note?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          tech_id?: string;
+          kind?: Database["public"]["Enums"]["shift_kind"];
+          starts_at?: string;
+          ends_at?: string;
+          note?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shift_blocks_tech_id_fkey";
+            columns: ["tech_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<never, never>;
     Functions: {
@@ -772,6 +812,36 @@ export type Database = {
         Args: { p_id: string };
         Returns: number;
       };
+      save_shift: {
+        Args: {
+          p_id: string | null;
+          p_tech_id: string;
+          p_starts_at: string;
+          p_ends_at: string;
+          p_kind?: string;
+          p_note?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["shift_blocks"]["Row"];
+      };
+      delete_shift: {
+        Args: { p_id: string };
+        Returns: number;
+      };
+      schedule_overlay: {
+        Args: { p_from: string; p_to: string; p_tech_id?: string | null };
+        Returns: {
+          id: string;
+          layer: string;
+          kind: string;
+          tech_id: string;
+          tech_name: string;
+          starts_at: string;
+          ends_at: string;
+          title: string | null;
+          status: string | null;
+          editable: boolean;
+        }[];
+      };
       schedule_for_range: {
         Args: { p_from: string; p_to: string; p_tech_id?: string | null };
         Returns: {
@@ -802,6 +872,7 @@ export type Database = {
       payment_method: "cash" | "card" | "other";
       skill: "manicure" | "pedicure" | "gel" | "acrylic" | "dip" | "nail_art" | "waxing" | "lash";
       block_kind: "appointment" | "break" | "unavailable";
+      shift_kind: "shift" | "break" | "time_off";
       notification_type:
         | "appointment_assigned"
         | "appointment_changed"

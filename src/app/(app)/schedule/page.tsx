@@ -1,138 +1,144 @@
+import { Suspense } from "react";
 import Link from "next/link";
-import { CalendarClock, Coffee, Lock } from "lucide-react";
+import { AlertTriangle, CalendarClock, Footprints, UserCheck } from "lucide-react";
 
-import { ActionButton } from "@/components/action-button";
-import { BlockTimeDialog } from "@/components/block-time-dialog";
-import { NotificationsCard } from "@/components/notifications-card";
-import { ScheduleDayGrid, ScheduleWeekGrid } from "@/components/schedule-grid";
-import { TechAppointments } from "@/components/tech-appointments";
+import { ScheduleBoard, ScheduleBoardSkeleton } from "@/components/schedule/schedule-board";
 import { Card, CardContent } from "@/components/ui/card";
-import { unblockTime } from "@/lib/actions/schedule";
 import { requireSession } from "@/lib/auth";
-import { formatDate, formatTime, toDateInputValue } from "@/lib/format";
-import { getActiveTechs, getNotifications, getSchedule, getTechAppointments } from "@/lib/queries";
+import { formatDate, toDateInputValue } from "@/lib/format";
+import { getActiveTechs, getScheduleOverlay } from "@/lib/queries";
 import { cn } from "@/lib/utils";
-import { BLOCK_KIND_LABEL } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 /**
  * The schedule.
  *
- * Managers and admins get every tech side by side in the day view; a tech sees
- * their own column. The week view is always one tech at a time — a week times
- * a full roster is unreadable on a tablet, and the question it answers is
- * "when is this person free?".
+ * Day view is the default because that is the question a tablet on the counter
+ * is asked all day. Managers and admins see every tech as a column; a tech
+ * sees their own. Week view is one tech across seven days.
  */
 export default async function SchedulePage({
   searchParams,
 }: {
   searchParams: Promise<{ view?: string; date?: string; tech?: string }>;
 }) {
-  const session = await requireSession();
-  const { view: rawView, date: rawDate, tech: rawTech } = await searchParams;
+  const params = await searchParams;
+  return (
+    <Suspense fallback={<SchedulePending />}>
+      <ScheduleContent params={params} />
+    </Suspense>
+  );
+}
 
-  const view: "day" | "week" = rawView === "week" ? "week" : "day";
-  const dateStr = rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : toDateInputValue();
+async function ScheduleContent({
+  params,
+}: {
+  params: { view?: string; date?: string; tech?: string };
+}) {
+  const session = await requireSession();
+
+  const view: "day" | "week" = params.view === "week" ? "week" : "day";
+  const dateStr =
+    params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : toDateInputValue();
   const [year, month, day] = dateStr.split("-").map(Number);
   const anchor = new Date(year, month - 1, day);
 
+  const allTechs = await getActiveTechs();
   const techs = session.canManageFloor
-    ? await getActiveTechs()
-    : [{ id: session.userId, full_name: session.profile.full_name } as const];
+    ? allTechs.map((tech) => ({ id: tech.id, full_name: tech.full_name }))
+    : [{ id: session.userId, full_name: session.profile.full_name }];
 
   const focusTechId = session.canManageFloor
-    ? rawTech && techs.some((tech) => tech.id === rawTech)
-      ? rawTech
+    ? params.tech && techs.some((tech) => tech.id === params.tech)
+      ? params.tech
       : (techs[0]?.id ?? null)
     : session.userId;
 
-  const { open_hour: openHour, close_hour: closeHour } = session.salon;
+  const openHour = session.salon.open_hour ?? 9;
+  const closeHour = session.salon.close_hour ?? 20;
 
+  const weekStart = startOfWeek(anchor);
   const [from, to] =
     view === "week"
-      ? [startOfWeek(anchor), addDays(startOfWeek(anchor), 7)]
+      ? [weekStart, addDays(weekStart, 7)]
       : [new Date(year, month - 1, day), new Date(year, month - 1, day + 1)];
 
-  // Day view for the floor shows every column; everything else is one tech.
+  // Week view is one tech across days; day view for the floor is all techs.
   const scopeTech = view === "week" || !session.canManageFloor ? focusTechId : null;
+  const { items, error } = await getScheduleOverlay(from, to, scopeTech);
 
-  const [entries, appointments, notifications] = await Promise.all([
-    getSchedule(from, to, scopeTech),
-    session.isTech ? getTechAppointments(session.userId) : Promise.resolve(null),
-    session.isTech ? getNotifications(8) : Promise.resolve([]),
-  ]);
-
-  const manualBlocks = entries.filter((entry) => entry.kind !== "appointment");
+  const weekDays =
+    view === "week"
+      ? Array.from({ length: 7 }, (_, i) => {
+          const d = addDays(weekStart, i);
+          return {
+            value: toDateInputValue(d),
+            label: `${d.toLocaleDateString("en-US", { weekday: "short" })} ${d.getDate()}`,
+            date: d,
+          };
+        })
+      : undefined;
 
   const linkTo = (next: Record<string, string>) => {
-    const params = new URLSearchParams({
+    const query = new URLSearchParams({
       view,
       date: dateStr,
       ...(focusTechId && session.canManageFloor ? { tech: focusTechId } : {}),
       ...next,
     });
-    return `/schedule?${params.toString()}`;
+    return `/schedule?${query.toString()}`;
   };
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-5">
+      <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-display">
             {session.canManageFloor ? "Schedule" : "My schedule"}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-muted-foreground">
             {view === "week"
-              ? `Week of ${formatDate(startOfWeek(anchor).toISOString())}`
+              ? `Week of ${formatDate(weekStart.toISOString())}`
               : formatDate(anchor.toISOString())}
             {" · "}
-            {entries.length} {entries.length === 1 ? "block" : "blocks"}
+            {items.length} {items.length === 1 ? "entry" : "entries"}
+            <span className="ml-2 opacity-70">Lịch làm việc</span>
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex overflow-hidden rounded-lg border border-border">
-            {(["day", "week"] as const).map((option) => (
-              <Link
-                key={option}
-                href={linkTo({ view: option })}
-                className={cn(
-                  "px-4 py-2.5 text-sm font-medium capitalize transition-colors",
-                  option === view
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {option}
-              </Link>
-            ))}
-          </div>
-
-          <BlockTimeDialog
-            techs={techs}
-            defaultTechId={focusTechId ?? session.userId}
-            defaultDate={dateStr}
-            canPickTech={session.canManageFloor}
-          />
+        <div className="flex overflow-hidden rounded-lg border border-border">
+          {(["day", "week"] as const).map((option) => (
+            <Link
+              key={option}
+              href={linkTo({ view: option })}
+              className={cn(
+                "min-h-11 px-5 py-2.5 text-sm font-semibold capitalize transition-colors",
+                option === view
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {option}
+            </Link>
+          ))}
         </div>
       </header>
 
-      {/* Date strip — seven taps beat a date picker on a tablet. */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {surroundingDays(anchor).map((entry) => (
           <Link
             key={entry.value}
             href={linkTo({ date: entry.value })}
             className={cn(
-              "flex min-w-16 shrink-0 flex-col items-center rounded-xl border px-3 py-2 transition-colors",
+              "flex min-h-[3.25rem] min-w-[3.25rem] shrink-0 flex-col items-center justify-center rounded-xl border px-3 transition-colors",
               entry.value === dateStr
                 ? "border-transparent bg-primary text-primary-foreground"
                 : "border-border bg-card text-muted-foreground hover:text-foreground",
             )}
           >
-            <span className="text-xs font-medium uppercase">{entry.weekday}</span>
-            <span className="text-lg font-semibold leading-tight tabular-nums">{entry.day}</span>
+            <span className="text-meta font-semibold uppercase">{entry.weekday}</span>
+            <span className="text-base font-semibold leading-tight tabular-nums">{entry.day}</span>
           </Link>
         ))}
       </div>
@@ -158,105 +164,83 @@ export default async function SchedulePage({
 
       <Legend />
 
-      {view === "week" ? (
-        <ScheduleWeekGrid
-          weekStart={startOfWeek(anchor)}
-          entries={entries}
-          openHour={openHour}
-          closeHour={closeHour}
-        />
+      {error ? (
+        <ScheduleError message={error} />
       ) : (
-        <ScheduleDayGrid
+        <ScheduleBoard
+          view={view}
           date={anchor}
+          dateStr={dateStr}
           techs={techs}
-          entries={entries}
+          items={items}
           openHour={openHour}
           closeHour={closeHour}
-          emptyLabel="No active techs on the roster yet."
+          currentUserId={session.userId}
+          canManageFloor={session.canManageFloor}
+          weekDays={weekDays}
         />
       )}
 
-      {/* Blocked hours are listed as well as drawn, so they can be cleared. */}
-      {manualBlocks.length > 0 ? (
-        <Card>
-          <CardContent className="p-0">
-            <p className="border-b border-border px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Blocked hours
-            </p>
-            <ul className="divide-y divide-border">
-              {manualBlocks.map((entry) => (
-                <li key={entry.id} className="flex items-center gap-3 px-4 py-2.5">
-                  <div
-                    className={cn(
-                      "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                      entry.kind === "break"
-                        ? "bg-waiting-bg text-waiting"
-                        : "bg-cancelled-bg text-cancelled",
-                    )}
-                  >
-                    {entry.kind === "break" ? (
-                      <Coffee className="size-4" />
-                    ) : (
-                      <Lock className="size-4" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {entry.title ?? BLOCK_KIND_LABEL[entry.kind]}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {entry.tech_name} · {formatTime(entry.starts_at)}–{formatTime(entry.ends_at)}
-                    </p>
-                  </div>
-                  <ActionButton
-                    action={unblockTime}
-                    fields={{ block_id: entry.id }}
-                    variant="ghost"
-                    size="sm"
-                  >
-                    Free up
-                  </ActionButton>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {session.isTech && appointments ? (
-        <>
-          <NotificationsCard notifications={notifications} />
-          <TechAppointments today={appointments.today} tomorrow={appointments.tomorrow} />
-        </>
-      ) : null}
+      <p className="text-meta text-muted-foreground">
+        Tap an empty slot to add a shift · Chạm vào ô trống để thêm ca làm
+      </p>
     </div>
   );
 }
 
 function Legend() {
+  const items = [
+    { icon: UserCheck, label: "Shift", vi: "Ca làm", cls: "bg-primary-soft border-primary/50", hatch: false },
+    { icon: CalendarClock, label: "Appointment", vi: "Lịch hẹn", cls: "bg-sky-bg border-sky/50 text-sky", hatch: true },
+    { icon: Footprints, label: "Walk-in", vi: "Khách vãng lai", cls: "bg-butter-bg border-butter/50 text-butter", hatch: true },
+  ];
+
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
-      <span className="inline-flex items-center gap-1.5">
-        <span className="size-3 rounded bg-progress" />
-        <CalendarClock className="size-3" /> Appointment
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <span className="size-3 rounded bg-waiting" />
-        <Coffee className="size-3" /> Break
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <span className="size-3 rounded bg-cancelled" />
-        <Lock className="size-3" /> Unavailable
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <span className="size-3 rounded bg-progress opacity-25" />
-        5-min buffer either side
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      {items.map(({ icon: Icon, label, vi, cls, hatch }) => (
+        <span key={label} className="inline-flex items-center gap-2 text-meta text-muted-foreground">
+          <span className={cn("size-4 rounded border", cls, hatch && "fill-hatched")} />
+          <Icon className="size-3.5" />
+          {label} <span className="opacity-70">· {vi}</span>
+        </span>
+      ))}
+      <span className="text-meta text-muted-foreground">
+        Read-only layers are hatched · Lớp chỉ đọc có gạch chéo
       </span>
     </div>
   );
 }
 
-/** Monday-start week, matching how `date_trunc('week')` groups earnings. */
+function ScheduleError({ message }: { message: string }) {
+  return (
+    <Card className="border-destructive/40">
+      <CardContent className="flex items-start gap-4 p-6">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-destructive/15 text-destructive">
+          <AlertTriangle className="size-5" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-title">The schedule couldn&apos;t load</p>
+          <p className="text-sm text-muted-foreground">{message}</p>
+          <p className="text-sm text-muted-foreground">
+            Không tải được lịch làm việc — xem thông báo phía trên.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SchedulePending() {
+  return (
+    <div className="space-y-5">
+      <div className="h-9 w-56 animate-pulse rounded-lg bg-surface-2" />
+      <div className="h-14 w-full animate-pulse rounded-xl bg-surface-2" />
+      <ScheduleBoardSkeleton />
+    </div>
+  );
+}
+
+/** Monday-start week, matching how earnings group by week. */
 function startOfWeek(date: Date): Date {
   const day = date.getDay();
   const diff = day === 0 ? -6 : 1 - day;
@@ -269,11 +253,7 @@ function addDays(date: Date, days: number): Date {
 
 function surroundingDays(selected: Date) {
   return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(
-      selected.getFullYear(),
-      selected.getMonth(),
-      selected.getDate() + index - 1,
-    );
+    const date = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate() + index - 1);
     return {
       value: toDateInputValue(date),
       weekday: date.toLocaleDateString("en-US", { weekday: "short" }),

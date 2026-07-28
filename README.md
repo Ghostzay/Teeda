@@ -101,6 +101,26 @@ for a tech. Week view is always one tech at a time: a week times a full roster
 is unreadable on a tablet, and the question it answers is "when is this person
 free?".
 
+### Shifts vs. bookings
+
+`schedule_blocks` answers "when is this tech unavailable?" — which is why it
+forbids overlap. A shift is the opposite: it is the window a tech is
+*available*, and appointments are meant to sit inside it. Those two rules
+cannot share a table, so shifts live in `shift_blocks` with their own GiST
+exclusion constraint (a tech cannot be rostered twice at once, but a booking
+inside a shift is expected, not a conflict).
+
+`schedule_overlay(p_from, p_to, p_tech_id)` unions the three layers the grid
+draws — `shift`, `appointment`, `walkin` — and returns an `editable` flag per
+row (`can_manage_floor() or tech_id = auth.uid()`), so the client never has to
+re-derive permission. Only the shift layer is writable, through `save_shift`
+and `delete_shift`; appointments and walk-ins are drawn read-only with a
+hatched fill and a type label, so the distinction survives for anyone who
+can't separate two hues.
+
+`shift_blocks.salon_id` defaults to `current_salon_id()`. There is one salon
+per install this iteration, but the column stays so multi-salon remains open.
+
 ## Payments
 
 Recorded, not processed — nothing here moves money, and there is no Stripe
@@ -229,6 +249,16 @@ rows their policies allow.
 
 ## Troubleshooting
 
+**"Application error: a server-side exception has occurred"** on a deployed
+route — almost always schema drift: the deployed build calls a function or
+column that the live database doesn't have yet, because a migration was
+skipped. Vercel shows only a digest; the real message is in the function logs
+(`function public.x does not exist`, `column "y" does not exist`). Fix it by
+applying every file in `supabase/migrations/` in order, not by catching the
+error. Note that the Supabase SQL editor runs a whole file as one transaction,
+so a single failing statement silently rolls the entire file back — check for
+an error after each one rather than assuming it took.
+
 **"The database isn't set up yet"** on `/welcome` — the migrations haven't been
 applied to this project. Run every file in `supabase/migrations/`, in order.
 
@@ -269,7 +299,20 @@ needs long scrolling on a tablet.
 | `/services` pricing | `/payments` | |
 | `/staff` roster & skills | | |
 | `/earnings` reports | | |
+| `/guide` Get Started | | |
 | `/settings` | | |
+
+`/guide` is a bilingual (EN/VI) walkthrough of every screen written for a
+non-technical manager — what each screen is for, how to add, edit and delete a
+record naming the actual on-screen buttons, what each badge means, and the
+mistakes people actually make. Its content is data in
+`src/lib/guide-content.ts`, so adding a screen means adding a section, not
+writing markup.
+
+There is no Salons screen. Managing salons from inside the app was removed;
+`salon_id` columns remain on every table and default to `current_salon_id()`,
+so the multi-tenant structure is intact and a salon switcher can come back
+without a migration.
 
 `/earnings` is one route that renders by role — a manager sees the floor, a
 tech sees their own take-home. `/customers` is reachable from Settings and the
@@ -280,15 +323,37 @@ bottom tab bar with a More sheet on phones.
 
 ## Design system
 
-Deep navy for structure, warm cream for the canvas, plum for action, rose gold
-for highlights. Status hues are deliberately far apart — amber (waiting), teal
-(in progress), emerald (completed) — so the floor reads at a glance without
-reading any words.
+Dark-first. `:root` is the dark theme and `.light` is the fallback, not the
+other way round — a salon tablet runs all day under warm light, and a bright
+canvas is the thing techs complain about first.
+
+Surfaces are layered, never flat: a near-black `--base`, cards one to two
+steps lighter (`--surface-1` … `--surface-3`), so depth comes from the
+surfaces rather than from borders drawn on black. One saturated
+polish-inspired accent carries action and nothing else; status and category
+tags use soft pastel tones (`--tone-mint`, `--tone-butter`, `--tone-lilac`,
+`--tone-sky`) so a busy screen doesn't turn into competing brights.
 
 All colour lives in `src/app/globals.css` as CSS custom properties exposed to
 Tailwind through `@theme inline`, so components reference `bg-primary`,
 `text-waiting`, `bg-ink` and so on rather than raw values. Changing the palette
 is a one-file edit.
+
+One trap worth knowing if you add tokens: a `--color-x` entry mints a
+`text-x` colour utility, which will silently shadow a same-named Tailwind font
+size. `--base` is deliberately *not* exposed as `--color-base` for that reason
+— `text-base` must stay a font size. Use `bg-background` for the base surface.
+
+Type is a real hierarchy rather than a pile of `text-sm`: `--text-display` for
+page titles, `--text-title` for section headers, `--text-meta` for the small
+print. Radii are large (`--radius: 1.125rem`) and spacing is generous, because
+every target is sized for a fingertip — no interactive element is under 44x44,
+including `size="sm"` buttons, which shed padding rather than height.
+
+Motion is Framer Motion, kept under 300ms and confined to page transitions,
+list stagger, press feedback and the schedule's day/week swap.
+`MotionConfig reducedMotion="user"` in `src/components/motion.tsx` means
+`prefers-reduced-motion` is honoured globally rather than per-component.
 
 ## Structure
 
@@ -298,20 +363,26 @@ src/
 │   ├── (app)/                 authenticated shell (header + tab bar + realtime)
 │   │   ├── dashboard/         manager floor view
 │   │   ├── tech/              tech view: current job + turn position
+│   │   ├── schedule/          day/week grid: shifts + bookings
 │   │   ├── jobs/              create + list
 │   │   ├── appointments/      day view + booking
 │   │   ├── customers/         profiles
+│   │   ├── guide/             Get Started (EN/VI)
 │   │   └── settings/          salon + team
 │   ├── login/
 │   ├── layout.tsx
 │   └── globals.css
 ├── components/
 │   ├── ui/                    shadcn/ui primitives
+│   ├── schedule/              grid, lane layout, slot dialog
 │   ├── turn-board.tsx         the rotation board
 │   ├── job-card.tsx           one client on the floor
+│   ├── motion.tsx             shared transitions (reduced-motion aware)
+│   ├── guide-browser.tsx      sectioned Get Started reader
 │   └── realtime-refresher.tsx
 ├── lib/
 │   ├── actions/               server actions (auth, jobs, customers, …)
+│   ├── guide-content.ts       bilingual guide copy as data
 │   ├── supabase/              server / browser / admin / middleware clients
 │   ├── types/                 generated DB types + domain types
 │   ├── turn.ts                turn management

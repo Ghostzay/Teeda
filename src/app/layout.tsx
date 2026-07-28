@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 
+import { MotionProvider } from "@/components/motion";
 import { ToastProvider } from "@/components/toast";
 import "./globals.css";
 
@@ -12,14 +13,16 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#f5f0f4",
+  themeColor: "#221c25",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="min-h-dvh antialiased">
-        <ToastProvider>{children}</ToastProvider>
+        <MotionProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </MotionProvider>
       </body>
     </html>
   );

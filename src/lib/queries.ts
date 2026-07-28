@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { describeSetupError } from "@/lib/setup-error";
 import { endOfToday, startOfToday } from "@/lib/format";
 import type {
   AppNotification,
@@ -12,6 +13,7 @@ import type {
   Profile,
   SalonEarningsRow,
   ScheduleEntry,
+  ScheduleItem,
   Service,
   TechEarnings,
   TurnCheckin,
@@ -366,4 +368,29 @@ export async function getCommissionRates(): Promise<Map<string, number | null>> 
 
   if (error) return new Map();
   return new Map((data ?? []).map((row) => [row.tech_id, row.commission_percent]));
+}
+
+/**
+ * Everything the schedule grid draws, in one round trip.
+ *
+ * Returns a discriminated result rather than throwing: a missing migration
+ * used to take the whole route down with a server-side exception, and the
+ * schedule is exactly where that is least acceptable. The page renders the
+ * message instead.
+ */
+export async function getScheduleOverlay(
+  from: Date,
+  to: Date,
+  techId?: string | null,
+): Promise<{ items: ScheduleItem[]; error: string | null }> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("schedule_overlay", {
+    p_from: from.toISOString(),
+    p_to: to.toISOString(),
+    p_tech_id: techId ?? null,
+  });
+
+  if (error) return { items: [], error: describeSetupError(error) };
+  return { items: data ?? [], error: null };
 }

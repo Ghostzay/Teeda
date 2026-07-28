@@ -1,119 +1,157 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant light (&:is(.light *));
 
 /**
- * Teeda design system.
+ * Teeda design system — dark first.
  *
- * Deep eggplant for structure, warm cream for the canvas, plum for action,
- * rose gold for highlights, charcoal for type.
+ * Surfaces are layered, never flat: a near-black base, cards one step up,
+ * raised elements two. That separation is what stops a dark UI reading as a
+ * black rectangle with text on it.
  *
- * Status reads left-to-right as work progresses: cool gray (waiting, inert) →
- * warm amber (in progress, live) → soft green (completed, settled). Only the
- * live state is warm, so a busy floor draws the eye first.
+ * One bold accent (polish fuchsia) carries primary actions and active state
+ * and nothing else — if everything is accented, nothing is. Status and
+ * category tags use soft pastels, which sit quietly on dark without competing.
+ *
+ * Every value is a token. Components never hardcode a colour.
  */
 :root {
-  /* Canvas — warm cream, not white. Easier on the eyes for a full shift. */
-  --background: oklch(0.971 0.013 82);
-  --foreground: oklch(0.245 0.012 300);
+  /* --- Layered surfaces ------------------------------------------------- */
+  --base: oklch(0.157 0.012 312);
+  --surface-1: oklch(0.196 0.014 312);
+  --surface-2: oklch(0.235 0.016 312);
+  --surface-3: oklch(0.278 0.018 312);
 
-  --card: oklch(0.995 0.005 85);
-  --card-foreground: oklch(0.245 0.012 300);
-  --popover: oklch(0.995 0.005 85);
-  --popover-foreground: oklch(0.245 0.012 300);
+  --background: var(--base);
+  --foreground: oklch(0.965 0.004 300);
 
-  /* Plum — the action colour. Deep enough for white text at AA. */
-  --primary: oklch(0.375 0.125 330);
-  --primary-foreground: oklch(0.985 0.008 82);
+  --card: var(--surface-1);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--foreground);
 
-  --secondary: oklch(0.928 0.028 55);
-  --secondary-foreground: oklch(0.33 0.05 330);
+  /* --- The one bold accent --------------------------------------------- */
+  --primary: oklch(0.665 0.235 350);
+  --primary-foreground: oklch(0.145 0.03 350);
+  --primary-soft: oklch(0.30 0.09 350);
 
-  --muted: oklch(0.942 0.013 82);
-  --muted-foreground: oklch(0.475 0.015 300);
+  /* Rose gold, for hairlines and premium edges only. */
+  --rose-gold: oklch(0.795 0.085 62);
+  --rose-gold-soft: oklch(0.32 0.045 62);
 
-  --accent: oklch(0.938 0.03 340);
-  --accent-foreground: oklch(0.33 0.07 330);
+  --secondary: var(--surface-3);
+  --secondary-foreground: oklch(0.94 0.006 300);
 
-  --destructive: oklch(0.53 0.19 25);
-  --destructive-foreground: oklch(0.985 0.008 82);
+  --muted: var(--surface-2);
+  --muted-foreground: oklch(0.735 0.012 300);
 
-  --border: oklch(0.893 0.012 60);
-  --input: oklch(0.876 0.014 60);
-  --ring: oklch(0.375 0.125 330);
+  --accent: var(--surface-3);
+  --accent-foreground: oklch(0.96 0.005 300);
 
-  /* Rose gold — accents and highlights, never load-bearing on its own. */
-  --rose-gold: oklch(0.705 0.09 48);
-  --rose-gold-soft: oklch(0.928 0.04 52);
+  --destructive: oklch(0.62 0.20 22);
+  --destructive-foreground: oklch(0.15 0.02 22);
 
-  /* Eggplant structural surfaces: sidebar, headers, the app frame. */
-  --ink: oklch(0.225 0.05 330);
-  --ink-foreground: oklch(0.958 0.012 60);
-  --ink-muted: oklch(0.735 0.035 340);
-  --ink-accent: oklch(0.305 0.06 330);
-  --ink-border: oklch(0.325 0.055 330);
+  --border: oklch(0.305 0.016 312);
+  --input: oklch(0.34 0.018 312);
+  --ring: var(--primary);
 
-  /* Job status — one hue per state, used by badges, rails and dots. */
-  --status-waiting: oklch(0.515 0.018 275);
-  --status-waiting-bg: oklch(0.935 0.008 275);
-  --status-progress: oklch(0.595 0.125 68);
-  --status-progress-bg: oklch(0.947 0.048 78);
-  --status-completed: oklch(0.545 0.095 155);
-  --status-completed-bg: oklch(0.943 0.035 155);
-  --status-cancelled: oklch(0.545 0.012 300);
-  --status-cancelled-bg: oklch(0.928 0.006 300);
+  /* --- Sidebar ---------------------------------------------------------- */
+  --ink: oklch(0.178 0.015 312);
+  /* Near-white: ~13:1 on --ink, comfortably past the 7:1 target. */
+  --ink-foreground: oklch(0.975 0.004 300);
+  --ink-muted: oklch(0.86 0.008 300);
+  --ink-accent: var(--surface-3);
+  --ink-border: oklch(0.285 0.018 312);
 
-  --radius: 0.875rem;
+  /* --- Soft pastel status ---------------------------------------------- */
+  --status-waiting: oklch(0.80 0.035 265);
+  --status-waiting-bg: oklch(0.285 0.028 265);
+  --status-progress: oklch(0.855 0.105 82);
+  --status-progress-bg: oklch(0.315 0.055 82);
+  --status-completed: oklch(0.855 0.105 162);
+  --status-completed-bg: oklch(0.30 0.05 162);
+  --status-cancelled: oklch(0.72 0.01 300);
+  --status-cancelled-bg: oklch(0.265 0.01 300);
+
+  /* Category pastels — schedule layers and tags. */
+  --tone-mint: oklch(0.855 0.10 168);
+  --tone-mint-bg: oklch(0.295 0.05 168);
+  --tone-butter: oklch(0.87 0.11 88);
+  --tone-butter-bg: oklch(0.315 0.055 88);
+  --tone-lilac: oklch(0.83 0.09 300);
+  --tone-lilac-bg: oklch(0.305 0.055 300);
+  --tone-sky: oklch(0.84 0.085 232);
+  --tone-sky-bg: oklch(0.30 0.05 232);
+
+  /* Generous by default — this is a tablet product. */
+  --radius: 1.125rem;
 }
 
-.dark {
-  --background: oklch(0.175 0.028 330);
-  --foreground: oklch(0.952 0.01 60);
+/* Optional light mode. Dark is the product; this is the courtesy fallback. */
+.light {
+  --base: oklch(0.978 0.008 82);
+  --surface-1: oklch(1 0 0);
+  --surface-2: oklch(0.965 0.008 82);
+  --surface-3: oklch(0.935 0.01 82);
 
-  --card: oklch(0.222 0.033 330);
-  --card-foreground: oklch(0.952 0.01 60);
-  --popover: oklch(0.222 0.033 330);
-  --popover-foreground: oklch(0.952 0.01 60);
+  --background: var(--base);
+  --foreground: oklch(0.235 0.012 300);
+  --card: var(--surface-1);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface-1);
+  --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.655 0.145 335);
-  --primary-foreground: oklch(0.175 0.03 335);
+  --primary: oklch(0.475 0.19 350);
+  --primary-foreground: oklch(0.99 0.005 350);
+  --primary-soft: oklch(0.93 0.04 350);
 
-  --secondary: oklch(0.30 0.04 330);
-  --secondary-foreground: oklch(0.952 0.01 60);
+  --rose-gold: oklch(0.60 0.09 62);
+  --rose-gold-soft: oklch(0.93 0.04 62);
 
-  --muted: oklch(0.275 0.032 330);
-  --muted-foreground: oklch(0.72 0.022 330);
+  --secondary: var(--surface-3);
+  --secondary-foreground: oklch(0.30 0.03 312);
+  --muted: var(--surface-2);
+  --muted-foreground: oklch(0.475 0.015 300);
+  --accent: var(--surface-3);
+  --accent-foreground: oklch(0.28 0.03 312);
 
-  --accent: oklch(0.325 0.06 335);
-  --accent-foreground: oklch(0.952 0.01 60);
+  --border: oklch(0.90 0.01 82);
+  --input: oklch(0.88 0.012 82);
 
-  --destructive: oklch(0.63 0.185 25);
-  --destructive-foreground: oklch(0.15 0.02 25);
+  --ink: oklch(0.20 0.04 330);
+  --ink-foreground: oklch(0.98 0.004 300);
+  --ink-muted: oklch(0.88 0.008 300);
+  --ink-accent: oklch(0.30 0.05 330);
+  --ink-border: oklch(0.31 0.05 330);
 
-  --border: oklch(0.315 0.035 330);
-  --input: oklch(0.34 0.036 330);
-  --ring: oklch(0.655 0.145 335);
+  --status-waiting: oklch(0.46 0.03 265);
+  --status-waiting-bg: oklch(0.935 0.012 265);
+  --status-progress: oklch(0.50 0.11 72);
+  --status-progress-bg: oklch(0.945 0.05 82);
+  --status-completed: oklch(0.46 0.10 162);
+  --status-completed-bg: oklch(0.94 0.04 162);
+  --status-cancelled: oklch(0.50 0.012 300);
+  --status-cancelled-bg: oklch(0.93 0.008 300);
 
-  --rose-gold: oklch(0.775 0.085 50);
-  --rose-gold-soft: oklch(0.35 0.05 50);
-
-  --ink: oklch(0.205 0.04 330);
-  --ink-foreground: oklch(0.958 0.012 60);
-  --ink-muted: oklch(0.71 0.032 340);
-  --ink-accent: oklch(0.295 0.05 330);
-  --ink-border: oklch(0.305 0.045 330);
-
-  --status-waiting: oklch(0.72 0.02 275);
-  --status-waiting-bg: oklch(0.295 0.012 275);
-  --status-progress: oklch(0.775 0.135 70);
-  --status-progress-bg: oklch(0.315 0.06 70);
-  --status-completed: oklch(0.735 0.105 155);
-  --status-completed-bg: oklch(0.29 0.045 155);
-  --status-cancelled: oklch(0.70 0.014 300);
-  --status-cancelled-bg: oklch(0.278 0.012 300);
+  --tone-mint: oklch(0.44 0.10 168);
+  --tone-mint-bg: oklch(0.94 0.045 168);
+  --tone-butter: oklch(0.47 0.10 88);
+  --tone-butter-bg: oklch(0.95 0.05 88);
+  --tone-lilac: oklch(0.44 0.10 300);
+  --tone-lilac-bg: oklch(0.94 0.04 300);
+  --tone-sky: oklch(0.44 0.09 232);
+  --tone-sky-bg: oklch(0.94 0.04 232);
 }
 
 @theme inline {
+  /* Deliberately NOT exposed as `--color-base`: that would mint a `text-base`
+     colour utility which shadows Tailwind's `text-base` font size, painting
+     every `text-base` element near-black. `--base` is consumed through
+     `--background` instead; use `bg-background` for the base surface. */
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -122,6 +160,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -152,11 +191,35 @@
   --color-cancelled: var(--status-cancelled);
   --color-cancelled-bg: var(--status-cancelled-bg);
 
-  --radius-sm: calc(var(--radius) - 6px);
-  --radius-md: calc(var(--radius) - 3px);
+  --color-mint: var(--tone-mint);
+  --color-mint-bg: var(--tone-mint-bg);
+  --color-butter: var(--tone-butter);
+  --color-butter-bg: var(--tone-butter-bg);
+  --color-lilac: var(--tone-lilac);
+  --color-lilac-bg: var(--tone-lilac-bg);
+  --color-sky: var(--tone-sky);
+  --color-sky-bg: var(--tone-sky-bg);
+
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 5px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 10px);
+  --radius-xl: calc(var(--radius) + 5px);
+  --radius-2xl: calc(var(--radius) + 12px);
+
+  /* Type scale — display down to metadata, with real steps between. */
+  --text-display: 2rem;
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.025em;
+  --text-display--font-weight: 700;
+
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.2;
+  --text-title--letter-spacing: -0.015em;
+  --text-title--font-weight: 650;
+
+  --text-meta: 0.75rem;
+  --text-meta--line-height: 1.35;
+  --text-meta--letter-spacing: 0.02em;
 }
 
 @layer base {
@@ -166,6 +229,11 @@
 
   html {
     -webkit-tap-highlight-color: transparent;
+    color-scheme: dark;
+  }
+
+  html.light {
+    color-scheme: light;
   }
 
   body {
@@ -192,14 +260,12 @@
     outline-offset: 2px;
   }
 
-  /* Numbers on this product are almost always compared, so align them. */
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
 }
 
 @layer utilities {
-  /* Live pulse on in-progress cards. */
   @keyframes status-pulse {
     0%,
     100% {
@@ -220,18 +286,33 @@
     }
   }
 
-  /* Warm top edge used on hero cards — the "premium" cue, used sparingly. */
+  /* Warm hairline on hero surfaces — the premium cue, used sparingly. */
   .edge-gold {
-    box-shadow: inset 0 3px 0 0 var(--rose-gold);
+    box-shadow: inset 0 1px 0 0 color-mix(in oklab, var(--rose-gold) 55%, transparent);
   }
 
-  /* A page that fits the viewport: the body never scrolls, panels do. */
-  .page-fit {
-    min-height: 0;
+  /* Raised card: a second surface step plus a soft lift. */
+  .surface-raised {
+    background-color: var(--surface-2);
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.35),
+      0 8px 24px -12px rgb(0 0 0 / 0.6);
   }
 
   .panel-scroll {
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+
+  /* Diagonal hatch marks a slot as held but not owned by the tech — used for
+     read-only overlay layers so they read differently from a solid shift. */
+  .fill-hatched {
+    background-image: repeating-linear-gradient(
+      135deg,
+      color-mix(in oklab, currentColor 22%, transparent) 0px,
+      color-mix(in oklab, currentColor 22%, transparent) 2px,
+      transparent 2px,
+      transparent 7px
+    );
   }
 }

@@ -7,7 +7,7 @@ import {
   ListOrdered,
   Receipt,
   CalendarClock,
-  Building2,
+  BookOpen,
   Scissors,
   Settings,
   TrendingUp,
@@ -42,6 +42,7 @@ const MANAGER_NAV: NavItem[] = [
   { href: "/services", label: "Services & Pricing", short: "Services", icon: Scissors },
   { href: "/staff", label: "Staff & Techs", short: "Staff", icon: Users },
   { href: "/earnings", label: "Earnings & Reports", short: "Earnings", icon: TrendingUp },
+  { href: "/guide", label: "Get Started", short: "Guide", icon: BookOpen },
   { href: "/settings", label: "Settings", short: "Settings", icon: Settings },
 ];
 
@@ -61,14 +62,9 @@ const TECH_NAV: NavItem[] = [
   { href: "/profile", label: "Profile & Skills", short: "Profile", icon: UserCog },
 ];
 
-/** The owner's set is the manager's plus salon provisioning. */
-const OWNER_NAV: NavItem[] = [
-  ...MANAGER_NAV,
-  { href: "/salons", label: "Salons", short: "Salons", icon: Building2 },
-];
-
 export function navForRole(role: UserRole): NavItem[] {
-  if (role === "super_admin") return OWNER_NAV;
+  // Single salon this iteration: the owner sees exactly the manager's screens.
+  if (role === "super_admin") return MANAGER_NAV;
   if (role === "manager") return MANAGER_NAV;
   if (role === "admin") return ADMIN_NAV;
   return TECH_NAV;
