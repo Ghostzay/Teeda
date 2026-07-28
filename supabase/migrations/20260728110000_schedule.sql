@@ -177,22 +177,73 @@ create trigger appointments_sync_block
   after insert or update or delete on public.appointments
   for each row execute function public.sync_appointment_block();
 
+-- ----------------------------------------------------------------------------
 -- Backfill blocks for bookings that already exist.
-insert into public.schedule_blocks (salon_id, tech_id, kind, starts_at, ends_at, appointment_id, title)
-select
-  a.salon_id,
-  a.tech_id,
-  'appointment',
-  a.scheduled_at,
-  a.scheduled_at + make_interval(mins => coalesce(s.duration_minutes, 45)),
-  a.id,
-  coalesce(c.name, 'Client') || ' · ' || a.service_name
-from public.appointments a
-left join public.services s on s.id = a.service_id
-left join public.customers c on c.id = a.customer_id
-where a.tech_id is not null
-  and a.status not in ('cancelled', 'completed')
-on conflict do nothing;
+--
+-- Row by row, deliberately, because a single bulk INSERT cannot survive either
+-- of the two things real booking data does here:
+--
+--   1. `ON CONFLICT DO NOTHING` with no conflict target makes Postgres consider
+--      every unique and exclusion constraint on the table as a potential
+--      arbiter — and `schedule_blocks_no_overlap` is DEFERRABLE, which is not
+--      allowed as one. That is a hard error the moment the statement inserts
+--      anything at all ("ON CONFLICT does not support deferrable unique
+--      constraints/exclusion constraints as arbiters"), so it passes on an
+--      empty database and fails on a real one.
+--
+--   2. This migration is what *introduces* the no-double-booking rule, so the
+--      data predating it has never been checked against it. Two overlapping
+--      appointments for one tech are entirely possible in an existing salon,
+--      and a bulk insert would abort the whole migration over them.
+--
+-- Skipping the overlap is the right call: the appointment itself is untouched,
+-- it simply does not get a calendar block until someone reschedules it. Losing
+-- a block is recoverable; refusing to migrate is not.
+-- ----------------------------------------------------------------------------
+do $$
+declare
+  r         record;
+  v_added   integer := 0;
+  v_skipped integer := 0;
+begin
+  for r in
+    select
+      a.salon_id,
+      a.tech_id,
+      a.scheduled_at,
+      a.scheduled_at + make_interval(mins => coalesce(s.duration_minutes, 45)) as ends_at,
+      a.id as appointment_id,
+      coalesce(c.name, 'Client') || ' · ' || a.service_name as title
+    from public.appointments a
+    left join public.services s on s.id = a.service_id
+    left join public.customers c on c.id = a.customer_id
+    where a.tech_id is not null
+      and a.status not in ('cancelled', 'completed')
+    -- Earliest first, so when two bookings overlap the one that was booked for
+    -- the earlier slot keeps its block. Deterministic, and explicable.
+    order by a.scheduled_at, a.id
+  loop
+    begin
+      insert into public.schedule_blocks
+        (salon_id, tech_id, kind, starts_at, ends_at, appointment_id, title)
+      values
+        (r.salon_id, r.tech_id, 'appointment', r.scheduled_at, r.ends_at,
+         r.appointment_id, r.title);
+      v_added := v_added + 1;
+    exception
+      when unique_violation then
+        -- Already has a block. Nothing to do.
+        v_skipped := v_skipped + 1;
+      when exclusion_violation then
+        v_skipped := v_skipped + 1;
+        raise notice
+          'Appointment % at % overlaps another booking for the same tech — no calendar block created. Reschedule it to give it one.',
+          r.appointment_id, r.scheduled_at;
+    end;
+  end loop;
+
+  raise notice 'Schedule backfill: % blocks created, % skipped.', v_added, v_skipped;
+end $$;
 
 -- ----------------------------------------------------------------------------
 -- Booking a tech takes them out of the walk-in rotation for that window.
