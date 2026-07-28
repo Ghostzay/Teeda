@@ -1,46 +1,36 @@
-import { UserPlus } from "lucide-react";
+import Link from "next/link";
+import { Scissors, Users } from "lucide-react";
 
-import { ActionButton, ActionSelect } from "@/components/action-button";
 import { ActionForm } from "@/components/action-form";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
-import {
-  createStaff,
-  resetTurnAction,
-  toggleStaffActive,
-  updateOwnName,
-  updateSalon,
-  updateStaffRole,
-} from "@/lib/actions/salon";
+import { updateOwnName, updateSalon } from "@/lib/actions/salon";
 import { requireManager } from "@/lib/auth";
-import { formatMoney, formatRelative } from "@/lib/format";
-import { getServices, getStaff } from "@/lib/queries";
-import { ROLE_DESCRIPTION, ROLE_LABEL, SKILL_LABEL, type UserRole } from "@/lib/types";
-import { ServiceManager } from "@/components/service-manager";
-import { SkillsEditor } from "@/components/skills-editor";
-import { updatePaySettings } from "@/lib/actions/services";
+import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Settings is now just the salon and your own account. Services, staff and
+ * pay each earned their own page — this one stays short on purpose.
+ */
 export default async function SettingsPage() {
   const session = await requireManager();
-  const [staff, services] = await Promise.all([getStaff(), getServices(false)]);
-  const techs = staff.filter((person) => person.role === "tech");
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <header>
-        <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">Salon details and who works the floor.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <p className="text-sm text-muted-foreground">
+          Salon since {formatDate(session.salon.created_at)}
+        </p>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle>Salon</CardTitle>
             <CardDescription>Shown in the header on every device.</CardDescription>
           </CardHeader>
@@ -56,8 +46,8 @@ export default async function SettingsPage() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Your profile</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle>Your account</CardTitle>
             <CardDescription>{session.email}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -77,198 +67,54 @@ export default async function SettingsPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Pay</CardTitle>
-          <CardDescription>
-            The tech share applies to services only — tips always go to the tech in full.
-            Changing it never rewrites payments already recorded.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ActionForm action={updatePaySettings} resetOnSuccess={false} className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="tech_split_percent">Tech share (%)</Label>
-              <Input
-                id="tech_split_percent"
-                name="tech_split_percent"
-                inputMode="decimal"
-                defaultValue={String(session.salon.tech_split_percent)}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pay_period_days">Pay period (days)</Label>
-              <Input
-                id="pay_period_days"
-                name="pay_period_days"
-                inputMode="numeric"
-                defaultValue={String(session.salon.pay_period_days)}
-                required
-              />
-            </div>
-            <div className="flex items-end">
-              <SubmitButton className="w-full">Save</SubmitButton>
-            </div>
-            <p className="text-xs text-muted-foreground sm:col-span-3">
-              On a {formatMoney(100)} service the tech keeps{" "}
-              {formatMoney((100 * session.salon.tech_split_percent) / 100)} and the salon keeps{" "}
-              {formatMoney(100 - (100 * session.salon.tech_split_percent) / 100)}.
-            </p>
-          </ActionForm>
-        </CardContent>
-      </Card>
-
-      <ServiceManager services={services} />
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="size-4" />
-            Add a technician
-          </CardTitle>
-          <CardDescription>
-            Creates a login for this salon. Share the password with them — they can change it later.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ActionForm action={createStaff} className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="staff_name">Full name</Label>
-              <Input id="staff_name" name="full_name" required autoComplete="off" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="staff_email">Email</Label>
-              <Input id="staff_email" name="email" type="email" required autoComplete="off" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="staff_password">Temporary password</Label>
-              <Input
-                id="staff_password"
-                name="password"
-                type="text"
-                minLength={8}
-                required
-                autoComplete="off"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="staff_role">Role</Label>
-              <Select id="staff_role" name="role" defaultValue="tech">
-                {(Object.keys(ROLE_LABEL) as UserRole[]).map((role) => (
-                  <option key={role} value={role}>
-                    {ROLE_LABEL[role]}
-                  </option>
-                ))}
-              </Select>
-              <p className="text-xs text-muted-foreground">{ROLE_DESCRIPTION.admin}</p>
-            </div>
-            <div className="sm:col-span-2">
-              <SubmitButton size="lg" className="w-full sm:w-auto">
-                Add to salon
-              </SubmitButton>
-            </div>
-          </ActionForm>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Team ({staff.length})</CardTitle>
-          <CardDescription>
-            Deactivate a tech to take them off the rotation without deleting anything.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ul className="divide-y divide-border">
-            {staff.map((person) => {
-              const isSelf = person.id === session.userId;
-
-              return (
-                <li key={person.id} className="flex flex-wrap items-center gap-3 p-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate font-medium">{person.full_name}</p>
-                      {isSelf ? <Badge variant="secondary">You</Badge> : null}
-                      {!person.is_active ? <Badge variant="cancelled">Off rotation</Badge> : null}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {ROLE_LABEL[person.role]} · last turn {formatRelative(person.last_turn_at)}
-                    </p>
-                    {person.role === "tech" ? (
-                      <p className="truncate text-xs text-muted-foreground">
-                        {person.skills.length > 0
-                          ? person.skills.map((skill) => SKILL_LABEL[skill]).join(" · ")
-                          : "No services set"}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {/* A manager can't demote themselves out of the salon. */}
-                  {isSelf ? null : (
-                    <div className="w-32 shrink-0">
-                      <ActionSelect
-                        action={updateStaffRole}
-                        fields={{ staff_id: person.id }}
-                        name="role"
-                        value={person.role}
-                        aria-label={`Role for ${person.full_name}`}
-                      >
-                        {(Object.keys(ROLE_LABEL) as UserRole[]).map((role) => (
-                          <option key={role} value={role}>
-                            {ROLE_LABEL[role]}
-                          </option>
-                        ))}
-                      </ActionSelect>
-                    </div>
-                  )}
-
-                  <div className="flex shrink-0 gap-2">
-                    {person.role === "tech" ? (
-                      <ActionButton
-                        action={resetTurnAction}
-                        fields={{ staff_id: person.id }}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Reset turn
-                      </ActionButton>
-                    ) : null}
-                    <ActionButton
-                      action={toggleStaffActive}
-                      fields={{ staff_id: person.id, is_active: person.is_active ? "false" : "true" }}
-                      variant={person.is_active ? "ghost" : "secondary"}
-                      size="sm"
-                      disabled={isSelf}
-                    >
-                      {person.is_active ? "Deactivate" : "Activate"}
-                    </ActionButton>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* Skills drive who the rotation can offer each service to, so managers
-          can correct them without waiting for the tech to update their profile. */}
-      {techs.length > 0 ? (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight">Technician skills</h2>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {techs.map((tech) => (
-              <SkillsEditor
-                key={tech.id}
-                techId={tech.id}
-                skills={tech.skills}
-                title={tech.full_name}
-                description="Services the rotation may offer them."
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Shortcut
+          href="/services"
+          icon={Scissors}
+          title="Services & pricing"
+          description="Menu, prices and the commission split."
+        />
+        <Shortcut
+          href="/staff"
+          icon={Users}
+          title="Staff & techs"
+          description="Roles, skills and daily check-ins."
+        />
+        <Shortcut
+          href="/customers"
+          icon={Users}
+          title="Clients"
+          description="Client records, phone numbers and notes."
+        />
+      </div>
     </div>
+  );
+}
+
+function Shortcut({
+  href,
+  icon: Icon,
+  title,
+  description,
+}: {
+  href: string;
+  icon: typeof Users;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link href={href} className="rounded-xl">
+      <Card className="h-full transition-colors hover:border-primary/40">
+        <CardContent className="space-y-2 p-4">
+          <div className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+            <Icon className="size-5" />
+          </div>
+          <div>
+            <p className="font-medium">{title}</p>
+            <p className="text-sm text-muted-foreground">{description}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }

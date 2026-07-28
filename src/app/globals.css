@@ -2,69 +2,113 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/**
+ * Teeda design system.
+ *
+ * Deep navy for structure, warm cream for the canvas, plum for action, rose
+ * gold for highlights. The status hues are deliberately far apart on the wheel
+ * — amber / teal / emerald — so a manager can read the floor from arm's length
+ * without reading any words.
+ */
 :root {
-  --background: oklch(0.99 0.005 320);
-  --foreground: oklch(0.21 0.02 300);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.02 300);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.02 300);
-  --primary: oklch(0.55 0.19 350);
-  --primary-foreground: oklch(0.99 0.01 350);
-  --secondary: oklch(0.96 0.012 330);
-  --secondary-foreground: oklch(0.3 0.03 320);
-  --muted: oklch(0.96 0.008 320);
-  --muted-foreground: oklch(0.53 0.02 310);
-  --accent: oklch(0.95 0.02 330);
-  --accent-foreground: oklch(0.3 0.04 330);
-  --destructive: oklch(0.58 0.21 27);
-  --destructive-foreground: oklch(0.99 0.01 27);
-  --border: oklch(0.92 0.008 320);
-  --input: oklch(0.92 0.008 320);
-  --ring: oklch(0.55 0.19 350);
+  /* Canvas — warm cream, not white. Easier on the eyes for a full shift. */
+  --background: oklch(0.971 0.013 82);
+  --foreground: oklch(0.245 0.035 268);
 
-  /* Job status — one hue per state, used by badges, borders and dots. */
-  --status-waiting: oklch(0.72 0.16 70);
-  --status-waiting-bg: oklch(0.96 0.05 80);
-  --status-progress: oklch(0.6 0.16 250);
-  --status-progress-bg: oklch(0.95 0.04 250);
-  --status-completed: oklch(0.6 0.14 155);
-  --status-completed-bg: oklch(0.95 0.04 155);
-  --status-cancelled: oklch(0.6 0.02 300);
-  --status-cancelled-bg: oklch(0.95 0.005 300);
+  --card: oklch(0.995 0.005 85);
+  --card-foreground: oklch(0.245 0.035 268);
+  --popover: oklch(0.995 0.005 85);
+  --popover-foreground: oklch(0.245 0.035 268);
 
-  --radius: 0.75rem;
+  /* Plum — the action colour. Deep enough for white text at AA. */
+  --primary: oklch(0.435 0.145 345);
+  --primary-foreground: oklch(0.985 0.008 82);
+
+  --secondary: oklch(0.925 0.022 62);
+  --secondary-foreground: oklch(0.32 0.045 300);
+
+  --muted: oklch(0.942 0.013 82);
+  --muted-foreground: oklch(0.485 0.022 268);
+
+  --accent: oklch(0.935 0.028 350);
+  --accent-foreground: oklch(0.32 0.06 345);
+
+  --destructive: oklch(0.53 0.19 25);
+  --destructive-foreground: oklch(0.985 0.008 82);
+
+  --border: oklch(0.892 0.014 82);
+  --input: oklch(0.878 0.016 82);
+  --ring: oklch(0.435 0.145 345);
+
+  /* Rose gold — accents and highlights, never load-bearing on its own. */
+  --rose-gold: oklch(0.705 0.088 48);
+  --rose-gold-soft: oklch(0.93 0.035 55);
+
+  /* Navy structural surfaces: sidebar, headers, the app frame. */
+  --ink: oklch(0.255 0.045 268);
+  --ink-foreground: oklch(0.955 0.012 82);
+  --ink-muted: oklch(0.70 0.03 268);
+  --ink-accent: oklch(0.335 0.055 268);
+  --ink-border: oklch(0.36 0.045 268);
+
+  /* Job status — one hue per state, used by badges, rails and dots. */
+  --status-waiting: oklch(0.60 0.135 62);
+  --status-waiting-bg: oklch(0.945 0.05 78);
+  --status-progress: oklch(0.505 0.105 218);
+  --status-progress-bg: oklch(0.938 0.032 218);
+  --status-completed: oklch(0.505 0.112 162);
+  --status-completed-bg: oklch(0.938 0.038 162);
+  --status-cancelled: oklch(0.535 0.015 268);
+  --status-cancelled-bg: oklch(0.928 0.008 268);
+
+  --radius: 0.875rem;
 }
 
 .dark {
-  --background: oklch(0.17 0.015 300);
-  --foreground: oklch(0.96 0.008 320);
-  --card: oklch(0.21 0.018 300);
-  --card-foreground: oklch(0.96 0.008 320);
-  --popover: oklch(0.21 0.018 300);
-  --popover-foreground: oklch(0.96 0.008 320);
-  --primary: oklch(0.7 0.17 350);
-  --primary-foreground: oklch(0.19 0.03 350);
-  --secondary: oklch(0.28 0.02 310);
-  --secondary-foreground: oklch(0.96 0.008 320);
-  --muted: oklch(0.27 0.015 310);
-  --muted-foreground: oklch(0.71 0.015 310);
-  --accent: oklch(0.3 0.03 330);
-  --accent-foreground: oklch(0.96 0.008 320);
-  --destructive: oklch(0.65 0.19 27);
-  --destructive-foreground: oklch(0.15 0.02 27);
-  --border: oklch(0.3 0.015 310);
-  --input: oklch(0.32 0.015 310);
-  --ring: oklch(0.7 0.17 350);
+  --background: oklch(0.185 0.028 268);
+  --foreground: oklch(0.95 0.012 82);
 
-  --status-waiting: oklch(0.78 0.15 75);
-  --status-waiting-bg: oklch(0.3 0.06 75);
-  --status-progress: oklch(0.72 0.14 250);
-  --status-progress-bg: oklch(0.29 0.06 250);
-  --status-completed: oklch(0.74 0.13 155);
-  --status-completed-bg: oklch(0.28 0.05 155);
-  --status-cancelled: oklch(0.7 0.015 300);
-  --status-cancelled-bg: oklch(0.27 0.01 300);
+  --card: oklch(0.232 0.033 268);
+  --card-foreground: oklch(0.95 0.012 82);
+  --popover: oklch(0.232 0.033 268);
+  --popover-foreground: oklch(0.95 0.012 82);
+
+  --primary: oklch(0.675 0.152 345);
+  --primary-foreground: oklch(0.185 0.03 345);
+
+  --secondary: oklch(0.31 0.035 268);
+  --secondary-foreground: oklch(0.95 0.012 82);
+
+  --muted: oklch(0.285 0.03 268);
+  --muted-foreground: oklch(0.715 0.022 268);
+
+  --accent: oklch(0.335 0.055 340);
+  --accent-foreground: oklch(0.95 0.012 82);
+
+  --destructive: oklch(0.63 0.185 25);
+  --destructive-foreground: oklch(0.15 0.02 25);
+
+  --border: oklch(0.325 0.03 268);
+  --input: oklch(0.35 0.032 268);
+  --ring: oklch(0.675 0.152 345);
+
+  --rose-gold: oklch(0.775 0.085 50);
+  --rose-gold-soft: oklch(0.35 0.05 50);
+
+  --ink: oklch(0.222 0.032 268);
+  --ink-foreground: oklch(0.955 0.012 82);
+  --ink-muted: oklch(0.685 0.028 268);
+  --ink-accent: oklch(0.315 0.042 268);
+  --ink-border: oklch(0.325 0.035 268);
+
+  --status-waiting: oklch(0.775 0.14 68);
+  --status-waiting-bg: oklch(0.315 0.06 68);
+  --status-progress: oklch(0.715 0.11 218);
+  --status-progress-bg: oklch(0.30 0.055 218);
+  --status-completed: oklch(0.725 0.12 162);
+  --status-completed-bg: oklch(0.295 0.05 162);
+  --status-cancelled: oklch(0.70 0.015 268);
+  --status-cancelled-bg: oklch(0.285 0.012 268);
 }
 
 @theme inline {
@@ -88,6 +132,15 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  --color-rose-gold: var(--rose-gold);
+  --color-rose-gold-soft: var(--rose-gold-soft);
+
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-accent: var(--ink-accent);
+  --color-ink-border: var(--ink-border);
+
   --color-waiting: var(--status-waiting);
   --color-waiting-bg: var(--status-waiting-bg);
   --color-progress: var(--status-progress);
@@ -97,10 +150,11 @@
   --color-cancelled: var(--status-cancelled);
   --color-cancelled-bg: var(--status-cancelled-bg);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
 }
 
 @layer base {
@@ -115,7 +169,7 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
     /* Tablet at the front desk: never let a rubber-band scroll hide the queue. */
     overscroll-behavior-y: none;
@@ -134,6 +188,11 @@
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
+  }
+
+  /* Numbers on this product are almost always compared, so align them. */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -157,5 +216,20 @@
     .animate-status-pulse {
       animation: none;
     }
+  }
+
+  /* Warm top edge used on hero cards — the "premium" cue, used sparingly. */
+  .edge-gold {
+    box-shadow: inset 0 3px 0 0 var(--rose-gold);
+  }
+
+  /* A page that fits the viewport: the body never scrolls, panels do. */
+  .page-fit {
+    min-height: 0;
+  }
+
+  .panel-scroll {
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireFloorAccess, requireManager } from "@/lib/auth";
+import { requireFloorAccess, requireManager, requireSession } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { resetTurn } from "@/lib/turn";
@@ -128,7 +128,8 @@ export async function resetTurnAction(_prev: ActionState, formData: FormData): P
 }
 
 export async function updateOwnName(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireManager();
+  // Anyone can rename themselves — this only ever touches their own row.
+  const session = await requireSession();
   const supabase = await createClient();
   const fullName = String(formData.get("full_name") ?? "").trim();
 
@@ -142,5 +143,6 @@ export async function updateOwnName(_prev: ActionState, formData: FormData): Pro
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/settings", "layout");
+  revalidatePath("/profile");
   return { ok: true, message: "Name updated." };
 }

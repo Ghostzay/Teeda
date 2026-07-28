@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { signOut } from "@/lib/actions/auth";
 import { getAuthUser, getSessionContext } from "@/lib/auth";
+import { homeForRole } from "@/lib/navigation";
 import { WelcomeForm } from "./welcome-form";
 
 /**
@@ -18,7 +19,7 @@ export default async function WelcomePage() {
 
   // Already set up — nothing to do here.
   const session = await getSessionContext();
-  if (session) redirect(session.canManageFloor ? "/dashboard" : "/tech");
+  if (session) redirect(homeForRole(session.role));
 
   const metadata = (user.user_metadata ?? {}) as { full_name?: string; salon_name?: string };
 

@@ -226,6 +226,41 @@ wrap it in an exception handler, and the app creates salons through
 Import the repo, set the four environment variables above, and deploy. No other
 configuration is needed — every route is server-rendered on demand.
 
+## Pages by role
+
+Each role gets its own short list of screens — one page, one job, so nothing
+needs long scrolling on a tablet.
+
+| Manager | Admin | Tech |
+| --- | --- | --- |
+| `/dashboard` one-pager | `/dashboard` today's ops | `/tech` My Turn |
+| `/queue` turns & queue | `/queue` | `/schedule` |
+| `/jobs` check-ins | `/jobs` | `/earnings` |
+| `/appointments` | `/appointments` | `/profile` skills |
+| `/services` pricing | `/payments` | |
+| `/staff` roster & skills | | |
+| `/earnings` reports | | |
+| `/settings` | | |
+
+`/earnings` is one route that renders by role — a manager sees the floor, a
+tech sees their own take-home. `/customers` is reachable from Settings and the
+Jobs page rather than taking a nav slot.
+
+Navigation is a navy sidebar from 768px up (both tablet orientations), and a
+bottom tab bar with a More sheet on phones.
+
+## Design system
+
+Deep navy for structure, warm cream for the canvas, plum for action, rose gold
+for highlights. Status hues are deliberately far apart — amber (waiting), teal
+(in progress), emerald (completed) — so the floor reads at a glance without
+reading any words.
+
+All colour lives in `src/app/globals.css` as CSS custom properties exposed to
+Tailwind through `@theme inline`, so components reference `bg-primary`,
+`text-waiting`, `bg-ink` and so on rather than raw values. Changing the palette
+is a one-file edit.
+
 ## Structure
 
 ```

@@ -1,236 +1,216 @@
 import Link from "next/link";
-import { CalendarDays, CheckCircle2, Clock, HandCoins, Plus, Scissors, Users, Wallet } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  Crown,
+  Plus,
+  Receipt,
+  Scissors,
+} from "lucide-react";
 
-import { JobCard } from "@/components/job-card";
-import { PaymentDialog } from "@/components/payment-dialog";
-import { SalonEarningsCard } from "@/components/earnings";
-import { TurnBoard } from "@/components/turn-board";
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { requireFloorAccess } from "@/lib/auth";
-import { cn } from "@/lib/utils";
-import { formatMoney, formatTime } from "@/lib/format";
-import {
-  getActiveJobs,
-  getActiveTechs,
-  getPaymentTotals,
-  getRecentlyCompleted,
-  getSalonEarnings,
-  getServices,
-  getTodayStats,
-} from "@/lib/queries";
+import { formatDuration, formatMoney, initials } from "@/lib/format";
+import { getActiveJobs, getPaymentTotals, getRecentlyCompleted, getTodayStats } from "@/lib/queries";
 import { getTurnQueue, suggestNextTechDetailed } from "@/lib/turn";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 /**
- * The floor view for managers and admins.
+ * The one-pager.
  *
- * Order is deliberate: rotation first (it's the product), then the clients you
- * can finish, then what just wrapped up, then who's waiting. Numbers sit below
- * the work — they're reference, not the job.
+ * Everything here answers "what is happening right now?" and nothing else.
+ * Lists are capped and link out to their own page, so this screen fits a
+ * tablet without scrolling no matter how busy the salon gets.
  */
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ earnings?: string }>;
-}) {
+export default async function DashboardPage() {
   const session = await requireFloorAccess();
-  const { earnings } = await searchParams;
-  const scope: "today" | "week" | "period" =
-    earnings === "week" || earnings === "period" ? earnings : "today";
 
-  const [stats, jobs, techs, queue, suggestion, finished, totals, services, salonEarnings] =
-    await Promise.all([
+  const [stats, jobs, queue, suggestion, finished, totals] = await Promise.all([
     getTodayStats(),
     getActiveJobs(),
-    getActiveTechs(),
     getTurnQueue(session.salon.id),
     suggestNextTechDetailed(session.salon.id),
-    getRecentlyCompleted(6),
+    getRecentlyCompleted(4),
     getPaymentTotals(),
-    getServices(),
-    getSalonEarnings(scope),
   ]);
 
   const waiting = jobs.filter((job) => job.status === "waiting");
   const inProgress = jobs.filter((job) => job.status === "in_progress");
-  const unpaid = finished.filter((job) => !job.payment);
+  const onRotation = queue.filter((entry) => entry.is_checked_in);
+  const unpaid = finished.filter((job) => !job.payment).length;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Today on the floor</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Today on the floor</h1>
           <p className="text-sm text-muted-foreground">
-            {suggestion.tech ? (
-              <>
-                <span className="font-medium text-foreground">{suggestion.tech.full_name}</span> is up
-                next. {suggestion.reason}
-              </>
-            ) : (
-              suggestion.reason
-            )}
+            {onRotation.length} on rotation · {stats.waiting} waiting · {stats.inProgress} in
+            progress
           </p>
         </div>
         <div className="flex gap-2">
           <Button asChild size="lg">
             <Link href="/jobs">
               <Plus className="size-4" />
-              Check in walk-in
+              Check in
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-            <Link href="/appointments">
-              <CalendarDays className="size-4" />
-              Appointments
+            <Link href="/queue">
+              <Crown className="size-4" />
+              Queue
             </Link>
           </Button>
         </div>
       </header>
 
-      {/* 1. The rotation — the most prominent element on the page. */}
-      <TurnBoard queue={queue} showFloorControls />
+      {/* Up next — the single most consequential fact on the screen. */}
+      <Card className="edge-gold overflow-hidden border-2 border-primary/20">
+        {/* Stacks on phones: at narrow widths a side-by-side button squeezes
+            the name down to an ellipsis, which is the one thing here that
+            must stay readable. */}
+        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+          {suggestion.tech ? (
+            <>
+              <div className="flex min-w-0 flex-1 items-center gap-4">
+              <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground">
+                {initials(suggestion.tech.full_name)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Up next
+                </p>
+                <p className="truncate text-2xl font-semibold leading-tight">
+                  {suggestion.tech.full_name}
+                </p>
+                <p className="truncate text-sm text-muted-foreground">{suggestion.reason}</p>
+              </div>
+              </div>
+            </>
+          ) : (
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Up next
+              </p>
+              <p className="text-lg font-semibold leading-tight">Nobody available</p>
+              <p className="text-sm text-muted-foreground">{suggestion.reason}</p>
+            </div>
+          )}
 
-      {/* 2. In progress: the clients you can finish and take payment for. */}
-      <QueueSection
-        title="With a tech now"
-        count={inProgress.length}
-        empty="No services running right now."
-        emptyIcon={Scissors}
-      >
-        {inProgress.map((job) => (
-          <JobCard
-            key={job.id}
-            job={job}
-            techs={techs}
-            services={services}
-            splitPercent={session.salon.tech_split_percent}
-            canManageFloor
-            currentUserId={session.userId}
-          />
-        ))}
-      </QueueSection>
+          <Button asChild variant="secondary" size="lg" className="w-full shrink-0 sm:w-auto">
+            <Link href="/queue">
+              Manage rotation
+              <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
-      {/* 3. Just finished — with a nudge for anything still unpaid. */}
-      {finished.length > 0 ? (
-        <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="size-4 text-completed" />
-              Just finished
-            </CardTitle>
-            {unpaid.length > 0 ? (
-              <span className="text-sm font-medium text-waiting">{unpaid.length} unpaid</span>
-            ) : null}
-          </CardHeader>
-          <CardContent className="p-0">
-            <ul className="divide-y divide-border">
-              {finished.map((job) => (
-                <li key={job.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{job.customer?.name ?? "Walk-in"}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {job.service_name} · {job.tech?.full_name ?? "Unassigned"} ·{" "}
-                      {formatTime(job.completed_at)}
-                    </p>
-                  </div>
-
-                  {job.payment ? (
-                    <span className="shrink-0 text-sm font-semibold tabular-nums text-completed">
-                      {formatMoney(
-                        Number(job.payment.service_amount) + Number(job.payment.tip_amount),
-                      )}
-                    </span>
-                  ) : (
-                    <div className="shrink-0">
-                      <PaymentDialog
-                        job={job}
-                        techs={techs}
-                        services={services}
-                        splitPercent={session.salon.tech_split_percent}
-                        variant="outline"
-                      />
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {/* 4. Waiting. */}
-      <QueueSection
-        title="Waiting"
-        count={waiting.length}
-        empty="Nobody is waiting — the floor is clear."
-        emptyIcon={Users}
-      >
-        {waiting.map((job) => (
-          <JobCard
-            key={job.id}
-            job={job}
-            techs={techs}
-            services={services}
-            splitPercent={session.salon.tech_split_percent}
-            canManageFloor
-            currentUserId={session.userId}
-          />
-        ))}
-      </QueueSection>
-
-      {/* 5. Numbers. */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat icon={Clock} label="Waiting" value={String(stats.waiting)} tone="waiting" />
-        <Stat icon={Scissors} label="In progress" value={String(stats.inProgress)} tone="progress" />
+        <Stat icon={Clock} label="Waiting" value={stats.waiting} tone="waiting" href="/queue" />
+        <Stat
+          icon={Scissors}
+          label="In progress"
+          value={stats.inProgress}
+          tone="progress"
+          href="/queue"
+        />
         <Stat
           icon={CheckCircle2}
           label="Done today"
-          value={String(stats.completedToday)}
+          value={stats.completedToday}
           tone="completed"
+          href="/payments"
         />
         <Stat
           icon={CalendarDays}
           label="Booked today"
-          value={String(stats.appointmentsToday)}
+          value={stats.appointmentsToday}
           tone="muted"
+          href="/appointments"
         />
       </section>
 
-      {/* Earnings across the floor, with the window the manager asked for. */}
-      <div className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          {(["today", "week", "period"] as const).map((option) => (
-            <Link
-              key={option}
-              href={`/dashboard?earnings=${option}`}
-              className={cn(
-                "rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
-                option === scope
-                  ? "border-transparent bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {option === "today" ? "Today" : option === "week" ? "This week" : "Pay period"}
-            </Link>
+      {/* Two short columns rather than one long page. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel
+          title="With a tech now"
+          count={inProgress.length}
+          href="/queue"
+          linkLabel="Queue"
+          empty="Nothing running right now."
+        >
+          {inProgress.slice(0, 4).map((job) => (
+            <Row
+              key={job.id}
+              name={job.customer?.name ?? "Walk-in"}
+              detail={`${job.service_name} · ${job.tech?.full_name ?? "Unassigned"}`}
+              trailing={formatDuration(job.started_at)}
+              status="in_progress"
+            />
           ))}
-        </div>
-        <SalonEarningsCard rows={salonEarnings} scope={scope} />
+        </Panel>
+
+        <Panel
+          title="Waiting"
+          count={waiting.length}
+          href="/queue"
+          linkLabel="Queue"
+          empty="Nobody is waiting."
+        >
+          {waiting.slice(0, 4).map((job) => (
+            <Row
+              key={job.id}
+              name={job.customer?.name ?? "Walk-in"}
+              detail={`${job.service_name} · ${job.tech?.full_name ?? "Nobody yet"}`}
+              trailing={formatDuration(job.checked_in_at)}
+              status="waiting"
+            />
+          ))}
+        </Panel>
       </div>
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat
-          icon={Wallet}
-          label="Collected today"
-          value={formatMoney(Number(totals.service_total) + Number(totals.tip_total))}
-          tone="completed"
-        />
-        <Stat icon={HandCoins} label="Tips today" value={formatMoney(totals.tip_total)} tone="waiting" />
-        <Stat icon={Wallet} label="Cash" value={formatMoney(totals.cash_total)} tone="muted" />
-        <Stat icon={Wallet} label="Card" value={formatMoney(totals.card_total)} tone="muted" />
-      </section>
+      {/* Money, one line. The full breakdown lives on Earnings. */}
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-3 p-4">
+          <div className="flex items-center gap-2">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-completed-bg text-completed">
+              <Receipt className="size-5" />
+            </div>
+            <div>
+              <p className="text-xl font-semibold leading-none tabular-nums">
+                {formatMoney(Number(totals.service_total) + Number(totals.tip_total))}
+              </p>
+              <p className="text-xs text-muted-foreground">collected today</p>
+            </div>
+          </div>
+
+          <Figure label="Tips" value={formatMoney(totals.tip_total)} />
+          <Figure label="To techs" value={formatMoney(totals.tech_total)} />
+          <Figure label="To salon" value={formatMoney(totals.salon_total)} />
+
+          <div className="ml-auto flex items-center gap-2">
+            {unpaid > 0 ? (
+              <Button asChild variant="secondary">
+                <Link href="/payments">{unpaid} unpaid</Link>
+              </Button>
+            ) : null}
+            <Button asChild variant="outline">
+              <Link href="/earnings">
+                Reports
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -247,55 +227,116 @@ function Stat({
   label,
   value,
   tone,
+  href,
 }: {
   icon: typeof Clock;
   label: string;
-  value: string;
+  value: number;
   tone: keyof typeof TONE_CLASS;
+  href: string;
 }) {
   return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-4">
-        <div
-          className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${TONE_CLASS[tone]}`}
+    <Link href={href} className="rounded-xl transition-transform active:scale-[0.99]">
+      <Card className="h-full">
+        <CardContent className="flex items-center gap-3 p-4">
+          <div
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-lg",
+              TONE_CLASS[tone],
+            )}
+          >
+            <Icon className="size-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-2xl font-semibold leading-none tabular-nums">{value}</p>
+            <p className="truncate text-xs text-muted-foreground">{label}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function Panel({
+  title,
+  count,
+  href,
+  linkLabel,
+  empty,
+  children,
+}: {
+  title: string;
+  count: number;
+  href: string;
+  linkLabel: string;
+  empty: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
+        <CardTitle className="flex items-center gap-2">
+          {title}
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
+            {count}
+          </span>
+        </CardTitle>
+        <Link
+          href={href}
+          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
-          <Icon className="size-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-xl font-semibold leading-none tabular-nums">{value}</p>
-          <p className="truncate text-xs text-muted-foreground">{label}</p>
-        </div>
+          {linkLabel}
+        </Link>
+      </CardHeader>
+      <CardContent className="p-0">
+        {count === 0 ? (
+          <p className="px-4 pb-4 text-sm text-muted-foreground">{empty}</p>
+        ) : (
+          <ul className="divide-y divide-border">{children}</ul>
+        )}
+        {count > 4 ? (
+          <Link
+            href={href}
+            className="block border-t border-border px-4 py-2.5 text-center text-sm font-medium text-primary"
+          >
+            {count - 4} more
+          </Link>
+        ) : null}
       </CardContent>
     </Card>
   );
 }
 
-function QueueSection({
-  title,
-  count,
-  empty,
-  emptyIcon,
-  children,
+function Row({
+  name,
+  detail,
+  trailing,
+  status,
 }: {
-  title: string;
-  count: number;
-  empty: string;
-  emptyIcon: typeof Clock;
-  children: React.ReactNode;
+  name: string;
+  detail: string;
+  trailing: string;
+  status: "waiting" | "in_progress";
 }) {
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle>{title}</CardTitle>
-        <span className="text-sm font-medium tabular-nums text-muted-foreground">{count}</span>
-      </CardHeader>
-      <CardContent>
-        {count === 0 ? (
-          <EmptyState icon={emptyIcon} title={empty} className="py-8" />
-        ) : (
-          <div className="space-y-3">{children}</div>
-        )}
-      </CardContent>
-    </Card>
+    <li className="flex items-center gap-3 px-4 py-2.5">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{name}</p>
+        <p className="truncate text-xs text-muted-foreground">{detail}</p>
+      </div>
+      <StatusBadge status={status} />
+      <span className="w-12 shrink-0 text-right text-sm font-medium tabular-nums text-muted-foreground">
+        {trailing}
+      </span>
+    </li>
+  );
+}
+
+function Figure({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-base font-semibold leading-none tabular-nums">{value}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
+    </div>
   );
 }
