@@ -16,16 +16,25 @@ export type Database = {
           id: string;
           name: string;
           created_at: string;
+          tech_split_percent: number;
+          pay_period_days: number;
+          pay_period_anchor: string;
         };
         Insert: {
           id?: string;
           name: string;
           created_at?: string;
+          tech_split_percent?: number;
+          pay_period_days?: number;
+          pay_period_anchor?: string;
         };
         Update: {
           id?: string;
           name?: string;
           created_at?: string;
+          tech_split_percent?: number;
+          pay_period_days?: number;
+          pay_period_anchor?: string;
         };
         Relationships: [];
       };
@@ -38,6 +47,7 @@ export type Database = {
           is_active: boolean;
           last_turn_at: string | null;
           created_at: string;
+          skills: Database["public"]["Enums"]["skill"][];
         };
         Insert: {
           id: string;
@@ -47,6 +57,7 @@ export type Database = {
           is_active?: boolean;
           last_turn_at?: string | null;
           created_at?: string;
+          skills?: Database["public"]["Enums"]["skill"][];
         };
         Update: {
           id?: string;
@@ -56,6 +67,7 @@ export type Database = {
           is_active?: boolean;
           last_turn_at?: string | null;
           created_at?: string;
+          skills?: Database["public"]["Enums"]["skill"][];
         };
         Relationships: [
           {
@@ -109,6 +121,8 @@ export type Database = {
           customer_id: string;
           tech_id: string | null;
           appointment_id: string | null;
+          service_id: string | null;
+          required_skills: Database["public"]["Enums"]["skill"][];
           type: Database["public"]["Enums"]["job_type"];
           status: Database["public"]["Enums"]["job_status"];
           service_name: string;
@@ -126,6 +140,8 @@ export type Database = {
           customer_id: string;
           tech_id?: string | null;
           appointment_id?: string | null;
+          service_id?: string | null;
+          required_skills?: Database["public"]["Enums"]["skill"][];
           type?: Database["public"]["Enums"]["job_type"];
           status?: Database["public"]["Enums"]["job_status"];
           service_name: string;
@@ -143,6 +159,8 @@ export type Database = {
           customer_id?: string;
           tech_id?: string | null;
           appointment_id?: string | null;
+          service_id?: string | null;
+          required_skills?: Database["public"]["Enums"]["skill"][];
           type?: Database["public"]["Enums"]["job_type"];
           status?: Database["public"]["Enums"]["job_status"];
           service_name?: string;
@@ -191,6 +209,7 @@ export type Database = {
           salon_id: string;
           customer_id: string;
           tech_id: string | null;
+          service_id: string | null;
           scheduled_at: string;
           service_name: string;
           notes: string | null;
@@ -202,6 +221,7 @@ export type Database = {
           salon_id: string;
           customer_id: string;
           tech_id?: string | null;
+          service_id?: string | null;
           scheduled_at: string;
           service_name: string;
           notes?: string | null;
@@ -213,6 +233,7 @@ export type Database = {
           salon_id?: string;
           customer_id?: string;
           tech_id?: string | null;
+          service_id?: string | null;
           scheduled_at?: string;
           service_name?: string;
           notes?: string | null;
@@ -252,6 +273,9 @@ export type Database = {
           service_amount: number;
           tip_amount: number;
           method: Database["public"]["Enums"]["payment_method"];
+          split_percent: number;
+          tech_amount: number;
+          salon_amount: number;
           note: string | null;
           recorded_by: string | null;
           created_at: string;
@@ -265,6 +289,9 @@ export type Database = {
           service_amount?: number;
           tip_amount?: number;
           method?: Database["public"]["Enums"]["payment_method"];
+          split_percent?: number;
+          tech_amount?: number;
+          salon_amount?: number;
           note?: string | null;
           recorded_by?: string | null;
           created_at?: string;
@@ -278,6 +305,9 @@ export type Database = {
           service_amount?: number;
           tip_amount?: number;
           method?: Database["public"]["Enums"]["payment_method"];
+          split_percent?: number;
+          tech_amount?: number;
+          salon_amount?: number;
           note?: string | null;
           recorded_by?: string | null;
           created_at?: string;
@@ -307,6 +337,167 @@ export type Database = {
           },
         ];
       };
+      services: {
+        Row: {
+          id: string;
+          salon_id: string;
+          name: string;
+          price: number;
+          duration_minutes: number | null;
+          required_skills: Database["public"]["Enums"]["skill"][];
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          salon_id: string;
+          name: string;
+          price?: number;
+          duration_minutes?: number | null;
+          required_skills?: Database["public"]["Enums"]["skill"][];
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          salon_id?: string;
+          name?: string;
+          price?: number;
+          duration_minutes?: number | null;
+          required_skills?: Database["public"]["Enums"]["skill"][];
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "services_salon_id_fkey";
+            columns: ["salon_id"];
+            isOneToOne: false;
+            referencedRelation: "salons";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      job_services: {
+        Row: {
+          id: string;
+          salon_id: string;
+          job_id: string;
+          service_id: string | null;
+          name: string;
+          price: number;
+          quantity: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          salon_id: string;
+          job_id: string;
+          service_id?: string | null;
+          name: string;
+          price?: number;
+          quantity?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          salon_id?: string;
+          job_id?: string;
+          service_id?: string | null;
+          name?: string;
+          price?: number;
+          quantity?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "job_services_job_id_fkey";
+            columns: ["job_id"];
+            isOneToOne: false;
+            referencedRelation: "jobs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      turn_checkins: {
+        Row: {
+          id: string;
+          salon_id: string;
+          tech_id: string;
+          checkin_date: string;
+          checked_in_at: string;
+          checked_in_by: string | null;
+          checked_out_at: string | null;
+          checked_out_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          salon_id: string;
+          tech_id: string;
+          checkin_date?: string;
+          checked_in_at?: string;
+          checked_in_by?: string | null;
+          checked_out_at?: string | null;
+          checked_out_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          salon_id?: string;
+          tech_id?: string;
+          checkin_date?: string;
+          checked_in_at?: string;
+          checked_in_by?: string | null;
+          checked_out_at?: string | null;
+          checked_out_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "turn_checkins_tech_id_fkey";
+            columns: ["tech_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          salon_id: string;
+          user_id: string;
+          type: Database["public"]["Enums"]["notification_type"];
+          title: string;
+          body: string | null;
+          link: string | null;
+          appointment_id: string | null;
+          job_id: string | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          salon_id: string;
+          user_id: string;
+          type: Database["public"]["Enums"]["notification_type"];
+          title: string;
+          body?: string | null;
+          link?: string | null;
+          appointment_id?: string | null;
+          job_id?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          read_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {
@@ -327,19 +518,29 @@ export type Database = {
         Returns: string;
       };
       turn_queue: {
-        Args: { p_salon_id?: string | null };
+        Args: {
+          p_salon_id?: string | null;
+          p_required_skills?: Database["public"]["Enums"]["skill"][] | null;
+        };
         Returns: {
           tech_id: string;
           full_name: string;
           last_turn_at: string | null;
           is_busy: boolean;
+          is_checked_in: boolean;
+          has_skills: boolean;
+          skills: Database["public"]["Enums"]["skill"][];
           waiting_jobs: number;
           jobs_today: number;
-          queue_position: number;
+          queue_position: number | null;
         }[];
       };
       suggest_next_tech: {
-        Args: { p_salon_id?: string | null };
+        Args: {
+          p_salon_id?: string | null;
+          p_required_skills?: Database["public"]["Enums"]["skill"][] | null;
+          p_exclude_tech_id?: string | null;
+        };
         Returns: string | null;
       };
       assign_job: {
@@ -369,11 +570,13 @@ export type Database = {
       record_payment: {
         Args: {
           p_job_id: string;
-          p_service_amount: number;
+          p_service_amount?: number | null;
           p_tip_amount?: number;
           p_method?: string;
           p_tech_id?: string | null;
           p_note?: string | null;
+          p_services?: Json | null;
+          p_split_percent?: number | null;
         };
         Returns: Database["public"]["Tables"]["payments"]["Row"];
       };
@@ -382,6 +585,8 @@ export type Database = {
         Returns: {
           service_total: number;
           tip_total: number;
+          tech_total: number;
+          salon_total: number;
           payment_count: number;
           cash_total: number;
           card_total: number;
@@ -391,10 +596,76 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: number;
       };
+      set_my_skills: {
+        Args: { p_skills: Database["public"]["Enums"]["skill"][] };
+        Returns: Database["public"]["Tables"]["profiles"]["Row"];
+      };
+      set_tech_skills: {
+        Args: { p_tech_id: string; p_skills: Database["public"]["Enums"]["skill"][] };
+        Returns: Database["public"]["Tables"]["profiles"]["Row"];
+      };
+      check_in_for_turns: {
+        Args: { p_tech_id?: string | null };
+        Returns: Database["public"]["Tables"]["turn_checkins"]["Row"];
+      };
+      check_out_of_turns: {
+        Args: { p_tech_id?: string | null };
+        Returns: Database["public"]["Tables"]["turn_checkins"]["Row"];
+      };
+      am_i_checked_in: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      pay_period_start: {
+        Args: { p_salon_id?: string | null };
+        Returns: string;
+      };
+      tech_earnings: {
+        Args: { p_tech_id?: string | null };
+        Returns: {
+          scope: string;
+          period_start: string;
+          services_count: number;
+          service_total: number;
+          tip_total: number;
+          tech_total: number;
+          split_percent: number;
+        }[];
+      };
+      salon_earnings: {
+        Args: { p_scope?: string };
+        Returns: {
+          tech_id: string;
+          full_name: string;
+          services_count: number;
+          service_total: number;
+          tip_total: number;
+          tech_total: number;
+          salon_total: number;
+        }[];
+      };
+      update_salon_pay_settings: {
+        Args: { p_split_percent: number; p_pay_period_days?: number | null; p_anchor?: string | null };
+        Returns: Database["public"]["Tables"]["salons"]["Row"];
+      };
+      mark_notifications_read: {
+        Args: { p_ids?: string[] | null };
+        Returns: number;
+      };
+      seed_default_services: {
+        Args: { p_salon_id: string };
+        Returns: number;
+      };
     };
     Enums: {
       user_role: "manager" | "admin" | "tech";
       payment_method: "cash" | "card" | "other";
+      skill: "manicure" | "pedicure" | "gel" | "acrylic" | "dip" | "nail_art" | "waxing" | "lash";
+      notification_type:
+        | "appointment_assigned"
+        | "appointment_changed"
+        | "appointment_cancelled"
+        | "job_assigned";
       job_type: "walk-in" | "appointment";
       job_status: "waiting" | "in_progress" | "completed" | "cancelled";
       appointment_status: "scheduled" | "checked_in" | "completed" | "cancelled";

@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/toast";
 import { createJob } from "@/lib/actions/jobs";
 import { createClient } from "@/lib/supabase/client";
-import { COMMON_SERVICES, type Customer, type Profile } from "@/lib/types";
+import { COMMON_SERVICES, type Customer, type Profile, type Service } from "@/lib/types";
+import { formatMoney } from "@/lib/format";
 
 /**
  * Check-in form. Tech defaults to "Next in rotation", so the fair path is the
@@ -21,14 +22,18 @@ import { COMMON_SERVICES, type Customer, type Profile } from "@/lib/types";
 export function JobForm({
   customers,
   techs,
+  services,
   salonId,
   suggestedTechName,
 }: {
   customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
+  /** The salon menu. Picking from it sets the price and required skills. */
+  services: Service[];
   salonId: string;
   suggestedTechName: string | null;
 }) {
+  const [serviceName, setServiceName] = useState("");
   const [isNewCustomer, setIsNewCustomer] = useState(customers.length === 0);
   const [photoUrl, setPhotoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -65,6 +70,7 @@ export function JobForm({
       className="space-y-4"
       onSuccess={() => {
         setPhotoUrl("");
+        setServiceName("");
         setIsNewCustomer(customers.length === 0);
       }}
     >
@@ -113,30 +119,59 @@ export function JobForm({
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="service_name">Service</Label>
-          <Input
-            id="service_name"
-            name="service_name"
-            list="service-options"
-            placeholder="Gel manicure"
-            required
-          />
-          <datalist id="service-options">
-            {COMMON_SERVICES.map((service) => (
-              <option key={service} value={service} />
-            ))}
-          </datalist>
-        </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="service_pick">Service</Label>
+        {services.length > 0 ? (
+          <>
+            {/* Picking from the menu carries the price and required skills. */}
+            <Select
+              id="service_pick"
+              name="service_id"
+              defaultValue=""
+              onChange={(event) => {
+                const picked = services.find((item) => item.id === event.target.value);
+                setServiceName(picked ? picked.name : "");
+              }}
+            >
+              <option value="">Off-menu / custom…</option>
+              {services.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name} — {formatMoney(service.price)}
+                </option>
+              ))}
+            </Select>
+            <Input
+              name="service_name"
+              value={serviceName}
+              onChange={(event) => setServiceName(event.target.value)}
+              placeholder="Or type a service"
+              required
+            />
+          </>
+        ) : (
+          <>
+            <Input
+              id="service_pick"
+              name="service_name"
+              list="service-options"
+              placeholder="Gel manicure"
+              required
+            />
+            <datalist id="service-options">
+              {COMMON_SERVICES.map((service) => (
+                <option key={service} value={service} />
+              ))}
+            </datalist>
+          </>
+        )}
+      </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="type">Type</Label>
-          <Select id="type" name="type" defaultValue="walk-in">
-            <option value="walk-in">Walk-in</option>
-            <option value="appointment">Appointment</option>
-          </Select>
-        </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="type">Type</Label>
+        <Select id="type" name="type" defaultValue="walk-in">
+          <option value="walk-in">Walk-in</option>
+          <option value="appointment">Appointment</option>
+        </Select>
       </div>
 
       <div className="space-y-1.5">

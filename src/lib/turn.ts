@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
-import type { Database, Profile, TurnQueueEntry } from "@/lib/types";
+import type { Database, Profile, Skill, TurnQueueEntry } from "@/lib/types";
 
 type Client = SupabaseClient<Database>;
 
@@ -27,23 +27,44 @@ type Client = SupabaseClient<Database>;
  * updated outside the app.
  */
 
-/** The full rotation board, already ordered: whoever is on top is up next. */
-export async function getTurnQueue(salonId?: string): Promise<TurnQueueEntry[]> {
+/**
+ * The full rotation board, already ordered.
+ *
+ * Every active tech is returned, but only those checked in for today hold a
+ * `queue_position` — they are the day's queue. Pass `requiredSkills` to also
+ * mark who can take a particular service.
+ */
+export async function getTurnQueue(
+  salonId?: string,
+  requiredSkills?: Skill[],
+): Promise<TurnQueueEntry[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("turn_queue", { p_salon_id: salonId ?? null });
+  const { data, error } = await supabase.rpc("turn_queue", {
+    p_salon_id: salonId ?? null,
+    p_required_skills: requiredSkills ?? null,
+  });
 
   if (error) throw new Error(`Failed to load turn queue: ${error.message}`);
   return data ?? [];
 }
 
 /**
- * The tech the system recommends for the next client.
- * Returns null when every tech is busy or the salon has no active techs —
- * the caller should then leave the job unassigned in the waiting queue.
+ * The tech the system recommends for the next client: checked in today, free,
+ * and holding every skill the service needs.
+ *
+ * Returns null when nobody qualifies — the caller then leaves the job
+ * unassigned rather than handing it to someone who can't do the work.
  */
-export async function suggestNextTech(salonId?: string): Promise<string | null> {
+export async function suggestNextTech(
+  salonId?: string,
+  requiredSkills?: Skill[],
+): Promise<string | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("suggest_next_tech", { p_salon_id: salonId ?? null });
+  const { data, error } = await supabase.rpc("suggest_next_tech", {
+    p_salon_id: salonId ?? null,
+    p_required_skills: requiredSkills ?? null,
+    p_exclude_tech_id: null,
+  });
 
   if (error) throw new Error(`Failed to suggest a tech: ${error.message}`);
   return data ?? null;
@@ -52,15 +73,25 @@ export async function suggestNextTech(salonId?: string): Promise<string | null> 
 /** Same suggestion, resolved to a name so the UI can explain the choice. */
 export async function suggestNextTechDetailed(
   salonId?: string,
+  requiredSkills?: Skill[],
 ): Promise<{ tech: TurnQueueEntry | null; reason: string }> {
-  const queue = await getTurnQueue(salonId);
-  const free = queue.filter((entry) => !entry.is_busy);
+  const queue = await getTurnQueue(salonId, requiredSkills);
+  const onRotation = queue.filter((entry) => entry.is_checked_in);
+  const free = onRotation.filter((entry) => !entry.is_busy && entry.has_skills);
 
   if (queue.length === 0) {
     return { tech: null, reason: "No active technicians on the roster." };
   }
+  if (onRotation.length === 0) {
+    return { tech: null, reason: "Nobody has checked in for turns today." };
+  }
   if (free.length === 0) {
-    return { tech: null, reason: "Every technician is with a client — the job will wait in the queue." };
+    return {
+      tech: null,
+      reason: requiredSkills?.length
+        ? "No free tech on rotation does this service — the client will wait."
+        : "Everyone on rotation is with a client — the job will wait in the queue.",
+    };
   }
 
   const next = free[0];
@@ -150,6 +181,11 @@ export async function resetTurn(techId: string, client?: Client) {
   const { error } = await supabase.rpc("reset_turn", { p_tech_id: techId });
 
   if (error) throw new Error(error.message);
+}
+
+/** Does this tech hold every skill the work needs? */
+export function hasRequiredSkills(techSkills: Skill[], required: Skill[]): boolean {
+  return required.every((skill) => techSkills.includes(skill));
 }
 
 /**

@@ -17,15 +17,19 @@ import {
   updateStaffRole,
 } from "@/lib/actions/salon";
 import { requireManager } from "@/lib/auth";
-import { formatRelative } from "@/lib/format";
-import { getStaff } from "@/lib/queries";
-import { ROLE_DESCRIPTION, ROLE_LABEL, type UserRole } from "@/lib/types";
+import { formatMoney, formatRelative } from "@/lib/format";
+import { getServices, getStaff } from "@/lib/queries";
+import { ROLE_DESCRIPTION, ROLE_LABEL, SKILL_LABEL, type UserRole } from "@/lib/types";
+import { ServiceManager } from "@/components/service-manager";
+import { SkillsEditor } from "@/components/skills-editor";
+import { updatePaySettings } from "@/lib/actions/services";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const session = await requireManager();
-  const staff = await getStaff();
+  const [staff, services] = await Promise.all([getStaff(), getServices(false)]);
+  const techs = staff.filter((person) => person.role === "tech");
 
   return (
     <div className="space-y-5">
@@ -72,6 +76,50 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pay</CardTitle>
+          <CardDescription>
+            The tech share applies to services only — tips always go to the tech in full.
+            Changing it never rewrites payments already recorded.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ActionForm action={updatePaySettings} resetOnSuccess={false} className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="tech_split_percent">Tech share (%)</Label>
+              <Input
+                id="tech_split_percent"
+                name="tech_split_percent"
+                inputMode="decimal"
+                defaultValue={String(session.salon.tech_split_percent)}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pay_period_days">Pay period (days)</Label>
+              <Input
+                id="pay_period_days"
+                name="pay_period_days"
+                inputMode="numeric"
+                defaultValue={String(session.salon.pay_period_days)}
+                required
+              />
+            </div>
+            <div className="flex items-end">
+              <SubmitButton className="w-full">Save</SubmitButton>
+            </div>
+            <p className="text-xs text-muted-foreground sm:col-span-3">
+              On a {formatMoney(100)} service the tech keeps{" "}
+              {formatMoney((100 * session.salon.tech_split_percent) / 100)} and the salon keeps{" "}
+              {formatMoney(100 - (100 * session.salon.tech_split_percent) / 100)}.
+            </p>
+          </ActionForm>
+        </CardContent>
+      </Card>
+
+      <ServiceManager services={services} />
 
       <Card>
         <CardHeader>
@@ -147,6 +195,13 @@ export default async function SettingsPage() {
                     <p className="text-xs text-muted-foreground">
                       {ROLE_LABEL[person.role]} · last turn {formatRelative(person.last_turn_at)}
                     </p>
+                    {person.role === "tech" ? (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {person.skills.length > 0
+                          ? person.skills.map((skill) => SKILL_LABEL[skill]).join(" · ")
+                          : "No services set"}
+                      </p>
+                    ) : null}
                   </div>
 
                   {/* A manager can't demote themselves out of the salon. */}
@@ -195,6 +250,25 @@ export default async function SettingsPage() {
           </ul>
         </CardContent>
       </Card>
+
+      {/* Skills drive who the rotation can offer each service to, so managers
+          can correct them without waiting for the tech to update their profile. */}
+      {techs.length > 0 ? (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight">Technician skills</h2>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {techs.map((tech) => (
+              <SkillsEditor
+                key={tech.id}
+                techId={tech.id}
+                skills={tech.skills}
+                title={tech.full_name}
+                description="Services the rotation may offer them."
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

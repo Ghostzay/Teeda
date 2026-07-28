@@ -10,24 +10,32 @@ import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Textarea } from "@/components/ui/textarea";
 import { createAppointment } from "@/lib/actions/appointments";
-import { COMMON_SERVICES, type Customer, type Profile } from "@/lib/types";
+import { formatMoney } from "@/lib/format";
+import { COMMON_SERVICES, type Customer, type Profile, type Service } from "@/lib/types";
 
 export function AppointmentForm({
   customers,
   techs,
+  services,
   defaultDate,
 }: {
   customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
+  /** The salon menu — booking off it carries price and required skills. */
+  services: Service[];
   defaultDate: string;
 }) {
   const [isNewCustomer, setIsNewCustomer] = useState(customers.length === 0);
+  const [serviceName, setServiceName] = useState("");
 
   return (
     <ActionForm
       action={createAppointment}
       className="space-y-4"
-      onSuccess={() => setIsNewCustomer(customers.length === 0)}
+      onSuccess={() => {
+        setIsNewCustomer(customers.length === 0);
+        setServiceName("");
+      }}
     >
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
@@ -82,18 +90,49 @@ export function AppointmentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="appt_service">Service</Label>
-        <Input
-          id="appt_service"
-          name="service_name"
-          list="appointment-services"
-          placeholder="Full set acrylic"
-          required
-        />
-        <datalist id="appointment-services">
-          {COMMON_SERVICES.map((service) => (
-            <option key={service} value={service} />
-          ))}
-        </datalist>
+        {services.length > 0 ? (
+          <>
+            <Select
+              id="appt_service"
+              name="service_id"
+              defaultValue=""
+              onChange={(event) => {
+                const picked = services.find((item) => item.id === event.target.value);
+                setServiceName(picked ? picked.name : "");
+              }}
+            >
+              <option value="">Off-menu / custom…</option>
+              {services.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name} — {formatMoney(service.price)}
+                  {service.duration_minutes ? ` · ${service.duration_minutes} min` : ""}
+                </option>
+              ))}
+            </Select>
+            <Input
+              name="service_name"
+              value={serviceName}
+              onChange={(event) => setServiceName(event.target.value)}
+              placeholder="Or type a service"
+              required
+            />
+          </>
+        ) : (
+          <>
+            <Input
+              id="appt_service"
+              name="service_name"
+              list="appointment-services"
+              placeholder="Full set acrylic"
+              required
+            />
+            <datalist id="appointment-services">
+              {COMMON_SERVICES.map((service) => (
+                <option key={service} value={service} />
+              ))}
+            </datalist>
+          </>
+        )}
       </div>
 
       <div className="space-y-1.5">

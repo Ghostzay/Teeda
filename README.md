@@ -17,7 +17,11 @@ Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 + shadcn/ui · Supabase
 | Job / service tracking (walk-in + appointment) | `/jobs` |
 | Simple appointments | `/appointments` |
 | Manager dashboard | `/dashboard` |
-| Payment tracking | `src/lib/actions/payments.ts`, `src/components/payment-dialog.tsx` |
+| Payment tracking + splits | `src/lib/actions/payments.ts`, `src/components/payment-dialog.tsx` |
+| Service menu & pricing | `src/components/service-manager.tsx`, `/settings` |
+| Skills & daily check-in | `src/lib/actions/rotation.ts`, `src/components/checkin-card.tsx` |
+| Earnings dashboards | `src/components/earnings.tsx` |
+| In-app notifications | `src/components/notifications-card.tsx` |
 
 ## Roles
 
@@ -35,10 +39,15 @@ Two capability lines in code: `canManageFloor` (manager + admin) and
 
 The rule, in priority order:
 
-1. A tech mid-service is not eligible for the next client.
-2. Among free techs, the oldest `last_turn_at` goes next. `NULL` (never taken a
-   turn) sorts first, so new hires get worked in.
-3. Ties break on hire date — stable and explicable to the floor.
+1. **Checked in today.** Being on the roster isn't enough — a tech opts into
+   the rotation each day, so "who's actually here" is recorded, not inferred.
+   Managers and admins can check someone in or out from the board.
+2. **Has the skill.** A service declares required skills; a tech declares what
+   they offer. The rotation never hands someone work they don't do.
+3. A tech mid-service is not eligible for the next client.
+4. Among the remaining, the oldest `last_turn_at` goes next. `NULL` (never
+   taken a turn) sorts first, so new hires get worked in.
+5. Ties break on hire date — stable and explicable to the floor.
 
 The ordering lives in SQL (`public.turn_queue`) so the app, the appointment
 check-in path, and any future integration rotate identically.
@@ -51,8 +60,22 @@ supplies the default, never a lock-in.
 
 **Accept / Pass.** A tech offered a client can accept it (starts the service,
 consumes the turn) or pass. Passing costs them their place: `last_turn_at`
-moves to now and the client is offered to whoever is next. Without that price,
-techs could skip work they didn't want and still hold the front of the queue.
+moves to now and the client is offered to the next tech *who has the skill*.
+Without that price, techs could skip work they didn't want and still hold the
+front of the queue.
+
+## Services and skills
+
+`skill` is the shared vocabulary — a single enum, so matching is a plain array
+containment test rather than two join tables. Managers own the price list
+(`services`); techs own their own skill list, and managers can correct it.
+
+New salons get a starter menu automatically, seeded by a trigger on `salons`
+rather than a one-off INSERT — a plain seed only covers salons that exist when
+the migration runs, leaving every later salon with an empty menu.
+
+Line items are snapshotted onto the job at checkout, so editing or deleting a
+service never rewrites what a past client was charged.
 
 ## Payments
 
@@ -62,9 +85,25 @@ integration. `record_payment()` stores the service amount, tip, method
 completes the job in the same call, because the desk does both in one motion
 at the counter. One payment row per job; re-recording corrects it.
 
-Managers and admins see today's till on the dashboard. A tech sees exactly one
-money figure: their own tips today (`my_tips_today()`), and payment rows only
-where the tip is theirs.
+Every payment stores its own `split_percent` (default 60/40), plus the
+resulting `tech_amount` and `salon_amount`. The split is stored, not derived:
+changing the house rate must never rewrite what someone already earned. Tips
+are never split — they go to the tech in full.
+
+Managers and admins see the floor's earnings on the dashboard across today,
+this week and the current pay period. A tech sees their own take-home over the
+same three windows, and payment rows only where the tip is theirs.
+
+Pay periods are a length plus an anchor date (`pay_period_days`,
+`pay_period_anchor`), which covers weekly, fortnightly and monthly-ish cycles
+without a rules engine.
+
+## Notifications
+
+In-app only. Written by database triggers rather than the app, so a tech is
+told about a booking however it was made — front desk, RPC, or SQL console.
+Covers appointments assigned, rescheduled, cancelled, and clients placed in
+front of a tech.
 
 ## Setup
 

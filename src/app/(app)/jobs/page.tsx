@@ -6,7 +6,7 @@ import { JobForm } from "@/components/job-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireFloorAccess } from "@/lib/auth";
-import { getActiveTechs, getCustomerOptions, getJobs } from "@/lib/queries";
+import { getActiveTechs, getCustomerOptions, getJobs, getServices } from "@/lib/queries";
 import { suggestNextTechDetailed } from "@/lib/turn";
 import { cn } from "@/lib/utils";
 import type { JobStatus } from "@/lib/types";
@@ -35,13 +35,14 @@ export default async function JobsPage({
 
   const active = FILTERS.find((option) => option.key === filter) ?? FILTERS[0];
 
-  const [jobs, customers, techs, suggestion] = await Promise.all([
+  const [jobs, customers, techs, services, suggestion] = await Promise.all([
     getJobs({
       statuses: active.statuses ? [...active.statuses] : undefined,
       todayOnly: active.key === "completed" || active.key === "all",
     }),
     getCustomerOptions(),
     getActiveTechs(),
+    getServices(),
     suggestNextTechDetailed(session.salon.id),
   ]);
 
@@ -73,6 +74,7 @@ export default async function JobsPage({
             <JobForm
               customers={customers}
               techs={techs}
+              services={services}
               salonId={session.salon.id}
               suggestedTechName={suggestion.tech?.full_name ?? null}
             />
@@ -112,6 +114,8 @@ export default async function JobsPage({
                   key={job.id}
                   job={job}
                   techs={techs}
+                  services={services}
+                  splitPercent={session.salon.tech_split_percent}
                   canManageFloor
                   currentUserId={session.userId}
                 />

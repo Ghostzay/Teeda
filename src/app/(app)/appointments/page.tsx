@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { cancelAppointment, checkInAppointment } from "@/lib/actions/appointments";
 import { requireSession } from "@/lib/auth";
 import { dayRange, formatDate, formatPhone, formatTime, toDateInputValue } from "@/lib/format";
-import { getActiveTechs, getAppointments, getCustomerOptions } from "@/lib/queries";
+import { getActiveTechs, getAppointments, getCustomerOptions, getServices } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -25,10 +25,11 @@ export default async function AppointmentsPage({
   const selectedDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : toDateInputValue();
   const range = dayRange(selectedDate);
 
-  const [appointments, customers, techs] = await Promise.all([
+  const [appointments, customers, techs, services] = await Promise.all([
     getAppointments(range),
     getCustomerOptions(),
     getActiveTechs(),
+    getServices(),
   ]);
 
   const days = surroundingDays(selectedDate);
@@ -146,7 +147,12 @@ export default async function AppointmentsPage({
               <CardTitle>Book an appointment</CardTitle>
             </CardHeader>
             <CardContent>
-              <AppointmentForm customers={customers} techs={techs} defaultDate={selectedDate} />
+              <AppointmentForm
+                customers={customers}
+                techs={techs}
+                services={services}
+                defaultDate={selectedDate}
+              />
             </CardContent>
           </Card>
         ) : null}

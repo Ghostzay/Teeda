@@ -14,7 +14,13 @@ import {
 } from "@/lib/actions/jobs";
 import { formatDuration, formatMoney, formatPhone, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { PAYMENT_METHOD_LABEL, type JobWithRelations, type Profile } from "@/lib/types";
+import {
+  PAYMENT_METHOD_LABEL,
+  SKILL_LABEL,
+  type JobWithRelations,
+  type Profile,
+  type Service,
+} from "@/lib/types";
 
 /**
  * One client on the floor. Status is legible three ways — colour rail, badge
@@ -28,6 +34,8 @@ import { PAYMENT_METHOD_LABEL, type JobWithRelations, type Profile } from "@/lib
 export function JobCard({
   job,
   techs,
+  services,
+  splitPercent,
   canManageFloor,
   currentUserId,
   showTurnActions = false,
@@ -35,6 +43,9 @@ export function JobCard({
 }: {
   job: JobWithRelations;
   techs: Profile[];
+  /** The salon menu, for the checkout cart. Empty for tech-facing cards. */
+  services: Service[];
+  splitPercent: number;
   canManageFloor: boolean;
   currentUserId: string;
   /** Renders the large Accept / Pass pair — the tech's own queue. */
@@ -86,6 +97,11 @@ export function JobCard({
             </a>
           ) : null}
           <span className="font-medium tabular-nums">{elapsed}</span>
+          {job.required_skills.length > 0 ? (
+            <span className="rounded-full bg-muted px-2 py-0.5">
+              Needs {job.required_skills.map((skill) => SKILL_LABEL[skill]).join(" + ")}
+            </span>
+          ) : null}
         </div>
 
         {job.notes ? (
@@ -116,6 +132,9 @@ export function JobCard({
             <span className="text-xs text-muted-foreground">
               {formatMoney(job.payment.service_amount)} service ·{" "}
               {formatMoney(job.payment.tip_amount)} tip · {PAYMENT_METHOD_LABEL[job.payment.method]}
+              {canManageFloor
+                ? ` · ${formatMoney(job.payment.tech_amount)} to tech`
+                : ` · ${formatMoney(job.payment.tech_amount)} yours`}
             </span>
           </div>
         ) : null}
@@ -172,7 +191,7 @@ export function JobCard({
             ) : null}
 
             {job.status === "in_progress" && canManageFloor ? (
-              <PaymentDialog job={job} techs={techs} />
+              <PaymentDialog job={job} techs={techs} services={services} splitPercent={splitPercent} />
             ) : null}
 
             {job.status === "in_progress" && canWork && !canManageFloor ? (
@@ -203,7 +222,13 @@ export function JobCard({
 
         {/* Finished but unpaid — the desk still needs to take money. */}
         {job.status === "completed" && canManageFloor && !job.payment ? (
-          <PaymentDialog job={job} techs={techs} variant="outline" />
+          <PaymentDialog
+            job={job}
+            techs={techs}
+            services={services}
+            splitPercent={splitPercent}
+            variant="outline"
+          />
         ) : null}
 
         {/* Manual override: the suggestion is a default, never a lock-in. */}

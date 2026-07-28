@@ -27,6 +27,8 @@ export async function recordPayment(_prev: ActionState, formData: FormData): Pro
   await requireFloorAccess();
 
   const jobId = String(formData.get("job_id") ?? "");
+  // Line items the desk rang up, as JSON from the checkout cart.
+  const linesRaw = String(formData.get("lines") ?? "");
   const serviceAmount = parseAmount(formData.get("service_amount"));
   const tipAmount = parseAmount(formData.get("tip_amount"));
   const method = String(formData.get("method") ?? "cash");
@@ -37,14 +39,27 @@ export async function recordPayment(_prev: ActionState, formData: FormData): Pro
     return { ok: false, error: "Enter amounts as numbers, e.g. 65 or 65.00." };
   }
 
+  let lines: unknown = null;
+  if (linesRaw) {
+    try {
+      const parsed = JSON.parse(linesRaw);
+      if (Array.isArray(parsed) && parsed.length > 0) lines = parsed;
+    } catch {
+      return { ok: false, error: "Could not read the services on this checkout." };
+    }
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.rpc("record_payment", {
     p_job_id: jobId,
-    p_service_amount: serviceAmount,
+    // When line items are present they define the total; this is the fallback.
+    p_service_amount: lines ? null : serviceAmount,
     p_tip_amount: tipAmount,
     p_method: method,
     p_tech_id: tipTech && tipTech !== "default" ? tipTech : null,
     p_note: note || null,
+    p_services: lines as never,
+    p_split_percent: null,
   });
 
   if (error) return { ok: false, error: error.message };

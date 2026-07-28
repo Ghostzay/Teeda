@@ -3,17 +3,21 @@ import { CalendarDays, CheckCircle2, Clock, HandCoins, Plus, Scissors, Users, Wa
 
 import { JobCard } from "@/components/job-card";
 import { PaymentDialog } from "@/components/payment-dialog";
+import { SalonEarningsCard } from "@/components/earnings";
 import { TurnBoard } from "@/components/turn-board";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireFloorAccess } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 import { formatMoney, formatTime } from "@/lib/format";
 import {
   getActiveJobs,
   getActiveTechs,
   getPaymentTotals,
   getRecentlyCompleted,
+  getSalonEarnings,
+  getServices,
   getTodayStats,
 } from "@/lib/queries";
 import { getTurnQueue, suggestNextTechDetailed } from "@/lib/turn";
@@ -27,10 +31,18 @@ export const dynamic = "force-dynamic";
  * can finish, then what just wrapped up, then who's waiting. Numbers sit below
  * the work — they're reference, not the job.
  */
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ earnings?: string }>;
+}) {
   const session = await requireFloorAccess();
+  const { earnings } = await searchParams;
+  const scope: "today" | "week" | "period" =
+    earnings === "week" || earnings === "period" ? earnings : "today";
 
-  const [stats, jobs, techs, queue, suggestion, finished, totals] = await Promise.all([
+  const [stats, jobs, techs, queue, suggestion, finished, totals, services, salonEarnings] =
+    await Promise.all([
     getTodayStats(),
     getActiveJobs(),
     getActiveTechs(),
@@ -38,6 +50,8 @@ export default async function DashboardPage() {
     suggestNextTechDetailed(session.salon.id),
     getRecentlyCompleted(6),
     getPaymentTotals(),
+    getServices(),
+    getSalonEarnings(scope),
   ]);
 
   const waiting = jobs.filter((job) => job.status === "waiting");
@@ -77,7 +91,7 @@ export default async function DashboardPage() {
       </header>
 
       {/* 1. The rotation — the most prominent element on the page. */}
-      <TurnBoard queue={queue} showResetControl />
+      <TurnBoard queue={queue} showFloorControls />
 
       {/* 2. In progress: the clients you can finish and take payment for. */}
       <QueueSection
@@ -91,6 +105,8 @@ export default async function DashboardPage() {
             key={job.id}
             job={job}
             techs={techs}
+            services={services}
+            splitPercent={session.salon.tech_split_percent}
             canManageFloor
             currentUserId={session.userId}
           />
@@ -129,7 +145,13 @@ export default async function DashboardPage() {
                     </span>
                   ) : (
                     <div className="shrink-0">
-                      <PaymentDialog job={job} techs={techs} variant="outline" />
+                      <PaymentDialog
+                        job={job}
+                        techs={techs}
+                        services={services}
+                        splitPercent={session.salon.tech_split_percent}
+                        variant="outline"
+                      />
                     </div>
                   )}
                 </li>
@@ -151,6 +173,8 @@ export default async function DashboardPage() {
             key={job.id}
             job={job}
             techs={techs}
+            services={services}
+            splitPercent={session.salon.tech_split_percent}
             canManageFloor
             currentUserId={session.userId}
           />
@@ -174,6 +198,27 @@ export default async function DashboardPage() {
           tone="muted"
         />
       </section>
+
+      {/* Earnings across the floor, with the window the manager asked for. */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {(["today", "week", "period"] as const).map((option) => (
+            <Link
+              key={option}
+              href={`/dashboard?earnings=${option}`}
+              className={cn(
+                "rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
+                option === scope
+                  ? "border-transparent bg-primary text-primary-foreground"
+                  : "border-border bg-card text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {option === "today" ? "Today" : option === "week" ? "This week" : "Pay period"}
+            </Link>
+          ))}
+        </div>
+        <SalonEarningsCard rows={salonEarnings} scope={scope} />
+      </div>
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat

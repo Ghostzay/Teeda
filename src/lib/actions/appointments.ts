@@ -18,6 +18,7 @@ export async function createAppointment(
   const scheduledTime = String(formData.get("scheduled_time") ?? "");
   const notes = String(formData.get("notes") ?? "").trim();
   const techChoice = String(formData.get("tech_id") ?? "");
+  const serviceId = String(formData.get("service_id") ?? "").trim();
 
   let customerId = String(formData.get("customer_id") ?? "").trim();
   const newCustomerName = String(formData.get("new_customer_name") ?? "").trim();
@@ -53,6 +54,7 @@ export async function createAppointment(
     salon_id: session.salon.id,
     customer_id: customerId,
     tech_id: techChoice && techChoice !== "any" ? techChoice : null,
+    service_id: serviceId || null,
     scheduled_at: scheduledAt.toISOString(),
     service_name: serviceName,
     notes: notes || null,

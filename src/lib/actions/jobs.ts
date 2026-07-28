@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireFloorAccess, requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { assignJob, completeJob, skipJob, startJob, suggestNextTech } from "@/lib/turn";
-import type { ActionState, JobType } from "@/lib/types";
+import type { ActionState, JobType, Skill } from "@/lib/types";
 
 /** Every screen shows some slice of the queue, so refresh them together. */
 function revalidateQueue() {
@@ -33,6 +33,7 @@ export async function createJob(_prev: ActionState, formData: FormData): Promise
   const notes = String(formData.get("notes") ?? "").trim();
   const photoUrl = String(formData.get("photo_url") ?? "").trim();
   const techChoice = String(formData.get("tech_id") ?? "auto");
+  const serviceId = String(formData.get("service_id") ?? "").trim();
 
   let customerId = String(formData.get("customer_id") ?? "").trim();
   const newCustomerName = String(formData.get("new_customer_name") ?? "").trim();
@@ -58,25 +59,60 @@ export async function createJob(_prev: ActionState, formData: FormData): Promise
     customerId = customer.id;
   }
 
+  // A menu service brings its required skills, so the rotation only offers
+  // this client to a tech who actually does the work.
+  let requiredSkills: Skill[] = [];
+  let servicePrice: number | null = null;
+
+  if (serviceId) {
+    const { data: service } = await supabase
+      .from("services")
+      .select("required_skills, price")
+      .eq("id", serviceId)
+      .maybeSingle();
+
+    if (service) {
+      requiredSkills = service.required_skills;
+      servicePrice = Number(service.price);
+    }
+  }
+
   let techId: string | null = null;
   if (techChoice === "auto") {
-    techId = await suggestNextTech(session.salon.id);
+    techId = await suggestNextTech(session.salon.id, requiredSkills);
   } else if (techChoice !== "unassigned") {
     techId = techChoice;
   }
 
-  const { error } = await supabase.from("jobs").insert({
-    salon_id: session.salon.id,
-    customer_id: customerId,
-    tech_id: techId,
-    type,
-    status: "waiting",
-    service_name: serviceName,
-    notes: notes || null,
-    photo_url: photoUrl || null,
-  });
+  const { data: job, error } = await supabase
+    .from("jobs")
+    .insert({
+      salon_id: session.salon.id,
+      customer_id: customerId,
+      tech_id: techId,
+      service_id: serviceId || null,
+      required_skills: requiredSkills,
+      type,
+      status: "waiting",
+      service_name: serviceName,
+      notes: notes || null,
+      photo_url: photoUrl || null,
+    })
+    .select("id")
+    .single();
 
   if (error) return fail(error);
+
+  // Seed the checkout line item so the desk isn't re-picking at payment time.
+  if (job && serviceId && servicePrice !== null) {
+    await supabase.from("job_services").insert({
+      salon_id: session.salon.id,
+      job_id: job.id,
+      service_id: serviceId,
+      name: serviceName,
+      price: servicePrice,
+    });
+  }
 
   revalidateQueue();
   revalidatePath("/customers");

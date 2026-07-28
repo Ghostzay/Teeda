@@ -9,18 +9,37 @@ export type Customer = Tables<"customers">;
 export type Job = Tables<"jobs">;
 export type Appointment = Tables<"appointments">;
 export type Payment = Tables<"payments">;
+export type Service = Tables<"services">;
+export type JobService = Tables<"job_services">;
+export type TurnCheckin = Tables<"turn_checkins">;
+export type AppNotification = Tables<"notifications">;
 
 export type UserRole = Enums<"user_role">;
 export type JobType = Enums<"job_type">;
 export type JobStatus = Enums<"job_status">;
 export type AppointmentStatus = Enums<"appointment_status">;
 export type PaymentMethod = Enums<"payment_method">;
+export type Skill = Enums<"skill">;
+export type NotificationType = Enums<"notification_type">;
 
 /** One row of the rotation board, as returned by the `turn_queue` RPC. */
 export type TurnQueueEntry = FunctionReturns<"turn_queue">[number];
 
 /** Today's till, as returned by `payment_totals_today`. */
 export type PaymentTotals = FunctionReturns<"payment_totals_today">[number];
+
+/** One earnings window (today / week / pay period) for a single tech. */
+export type TechEarningsRow = FunctionReturns<"tech_earnings">[number];
+
+/** One tech's line in the manager's earnings overview. */
+export type SalonEarningsRow = FunctionReturns<"salon_earnings">[number];
+
+/** Earnings keyed by window, so the UI doesn't scan an array. */
+export type TechEarnings = {
+  today: TechEarningsRow | null;
+  week: TechEarningsRow | null;
+  period: TechEarningsRow | null;
+};
 
 /**
  * The signed-in user plus their salon — resolved once per request.
@@ -46,6 +65,8 @@ export type JobWithRelations = Job & {
   customer: Pick<Customer, "id" | "name" | "phone"> | null;
   tech: Pick<Profile, "id" | "full_name"> | null;
   payment: Payment | null;
+  /** Checkout line items, once the desk has rung them up. */
+  services: JobService[];
 };
 
 export type AppointmentWithRelations = Appointment & {
@@ -95,16 +116,40 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   other: "Other",
 };
 
-/** Quick-pick services offered in the job and appointment forms. */
+/**
+ * The shared vocabulary between a service and a technician: a service says
+ * which skills it needs, a tech says which they have, and the rotation only
+ * offers work someone can actually do.
+ */
+export const SKILL_LABEL: Record<Skill, string> = {
+  manicure: "Manicure",
+  pedicure: "Pedicure",
+  gel: "Gel",
+  acrylic: "Acrylic",
+  dip: "Dip powder",
+  nail_art: "Nail art",
+  waxing: "Waxing",
+  lash: "Lashes",
+};
+
+export const ALL_SKILLS = Object.keys(SKILL_LABEL) as Skill[];
+
+/** A line the desk is ringing up, before it's saved. */
+export type CartLine = {
+  service_id: string | null;
+  name: string;
+  price: number;
+  quantity: number;
+};
+
+/**
+ * Fallback quick-picks for a salon whose menu is empty. The `services` table
+ * is the real source of truth everywhere it has rows.
+ */
 export const COMMON_SERVICES = [
   "Manicure",
   "Pedicure",
   "Gel manicure",
-  "Gel pedicure",
   "Full set acrylic",
-  "Acrylic fill",
-  "Dip powder",
-  "Nail art",
   "Polish change",
-  "Removal",
 ] as const;

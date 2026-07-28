@@ -3,16 +3,21 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { endOfToday, startOfToday } from "@/lib/format";
 import type {
+  AppNotification,
   AppointmentWithRelations,
   Customer,
   JobStatus,
   JobWithRelations,
   PaymentTotals,
   Profile,
+  SalonEarningsRow,
+  Service,
+  TechEarnings,
+  TurnCheckin,
 } from "@/lib/types";
 
 const JOB_SELECT =
-  "*, customer:customers(id, name, phone), tech:profiles(id, full_name), payment:payments(*)";
+  "*, customer:customers(id, name, phone), tech:profiles(id, full_name), payment:payments(*), services:job_services(*)";
 const APPOINTMENT_SELECT = "*, customer:customers(id, name, phone), tech:profiles(id, full_name)";
 
 /**
@@ -21,11 +26,15 @@ const APPOINTMENT_SELECT = "*, customer:customers(id, name, phone), tech:profile
  * so no query here needs to filter by salon defensively.
  */
 
-/** `payment` comes back as an array from PostgREST; flatten to one or null. */
+/**
+ * PostgREST returns embedded one-to-one rows as arrays. Flatten `payment` to a
+ * single row (or null) and default `services` to an array.
+ */
 function normalizeJobs(rows: unknown[]): JobWithRelations[] {
-  return (rows as (Omit<JobWithRelations, "payment"> & { payment: unknown })[]).map((row) => ({
+  return (rows as { payment: unknown; services: unknown }[]).map((row) => ({
     ...row,
     payment: Array.isArray(row.payment) ? (row.payment[0] ?? null) : (row.payment ?? null),
+    services: Array.isArray(row.services) ? row.services : [],
   })) as JobWithRelations[];
 }
 
@@ -244,4 +253,82 @@ export async function getMyTipsToday(): Promise<number> {
 
   if (error) return 0;
   return Number(data ?? 0);
+}
+
+// ---------------------------------------------------------------------------
+// Services, skills, check-ins, earnings and notifications
+// ---------------------------------------------------------------------------
+
+/** The salon's price list. Pass `false` to include retired services. */
+export async function getServices(activeOnly = true): Promise<Service[]> {
+  const supabase = await createClient();
+
+  let query = supabase.from("services").select("*");
+  if (activeOnly) query = query.eq("is_active", true);
+
+  const { data, error } = await query
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (error) throw new Error(`Failed to load services: ${error.message}`);
+  return data ?? [];
+}
+
+/** Today's check-in rows for the salon, keyed by tech. */
+export async function getTodayCheckins(): Promise<Map<string, TurnCheckin>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("turn_checkins")
+    .select("*")
+    .eq("checkin_date", new Date().toLocaleDateString("en-CA"));
+
+  if (error) throw new Error(`Failed to load check-ins: ${error.message}`);
+  return new Map((data ?? []).map((row) => [row.tech_id, row]));
+}
+
+/** Whether the signed-in tech has opted into today's rotation. */
+export async function amICheckedIn(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("am_i_checked_in");
+
+  if (error) return false;
+  return Boolean(data);
+}
+
+/** A tech's earnings for today, this week and the current pay period. */
+export async function getTechEarnings(techId?: string): Promise<TechEarnings> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("tech_earnings", { p_tech_id: techId ?? null });
+
+  if (error) throw new Error(`Failed to load earnings: ${error.message}`);
+
+  const rows = data ?? [];
+  const find = (scope: string) => rows.find((row) => row.scope === scope) ?? null;
+
+  return { today: find("today"), week: find("week"), period: find("period") };
+}
+
+/** Manager overview: every tech's performance over a window. */
+export async function getSalonEarnings(
+  scope: "today" | "week" | "period" = "today",
+): Promise<SalonEarningsRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("salon_earnings", { p_scope: scope });
+
+  if (error) throw new Error(`Failed to load salon earnings: ${error.message}`);
+  return data ?? [];
+}
+
+export async function getNotifications(limit = 15): Promise<AppNotification[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) return [];
+  return data ?? [];
 }
