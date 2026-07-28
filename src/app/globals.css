@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(0.99 0.005 320);
+  --foreground: oklch(0.21 0.02 300);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.02 300);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.02 300);
+  --primary: oklch(0.55 0.19 350);
+  --primary-foreground: oklch(0.99 0.01 350);
+  --secondary: oklch(0.96 0.012 330);
+  --secondary-foreground: oklch(0.3 0.03 320);
+  --muted: oklch(0.96 0.008 320);
+  --muted-foreground: oklch(0.53 0.02 310);
+  --accent: oklch(0.95 0.02 330);
+  --accent-foreground: oklch(0.3 0.04 330);
+  --destructive: oklch(0.58 0.21 27);
+  --destructive-foreground: oklch(0.99 0.01 27);
+  --border: oklch(0.92 0.008 320);
+  --input: oklch(0.92 0.008 320);
+  --ring: oklch(0.55 0.19 350);
+
+  /* Job status — one hue per state, used by badges, borders and dots. */
+  --status-waiting: oklch(0.72 0.16 70);
+  --status-waiting-bg: oklch(0.96 0.05 80);
+  --status-progress: oklch(0.6 0.16 250);
+  --status-progress-bg: oklch(0.95 0.04 250);
+  --status-completed: oklch(0.6 0.14 155);
+  --status-completed-bg: oklch(0.95 0.04 155);
+  --status-cancelled: oklch(0.6 0.02 300);
+  --status-cancelled-bg: oklch(0.95 0.005 300);
+
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: oklch(0.17 0.015 300);
+  --foreground: oklch(0.96 0.008 320);
+  --card: oklch(0.21 0.018 300);
+  --card-foreground: oklch(0.96 0.008 320);
+  --popover: oklch(0.21 0.018 300);
+  --popover-foreground: oklch(0.96 0.008 320);
+  --primary: oklch(0.7 0.17 350);
+  --primary-foreground: oklch(0.19 0.03 350);
+  --secondary: oklch(0.28 0.02 310);
+  --secondary-foreground: oklch(0.96 0.008 320);
+  --muted: oklch(0.27 0.015 310);
+  --muted-foreground: oklch(0.71 0.015 310);
+  --accent: oklch(0.3 0.03 330);
+  --accent-foreground: oklch(0.96 0.008 320);
+  --destructive: oklch(0.65 0.19 27);
+  --destructive-foreground: oklch(0.15 0.02 27);
+  --border: oklch(0.3 0.015 310);
+  --input: oklch(0.32 0.015 310);
+  --ring: oklch(0.7 0.17 350);
+
+  --status-waiting: oklch(0.78 0.15 75);
+  --status-waiting-bg: oklch(0.3 0.06 75);
+  --status-progress: oklch(0.72 0.14 250);
+  --status-progress-bg: oklch(0.29 0.06 250);
+  --status-completed: oklch(0.74 0.13 155);
+  --status-completed-bg: oklch(0.28 0.05 155);
+  --status-cancelled: oklch(0.7 0.015 300);
+  --status-cancelled-bg: oklch(0.27 0.01 300);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-waiting: var(--status-waiting);
+  --color-waiting-bg: var(--status-waiting-bg);
+  --color-progress: var(--status-progress);
+  --color-progress-bg: var(--status-progress-bg);
+  --color-completed: var(--status-completed);
+  --color-completed-bg: var(--status-completed-bg);
+  --color-cancelled: var(--status-cancelled);
+  --color-cancelled-bg: var(--status-cancelled-bg);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    /* Tablet at the front desk: never let a rubber-band scroll hide the queue. */
+    overscroll-behavior-y: none;
+  }
+
+  /* Touch targets stay finger-sized on tablets without extra classes. */
+  button,
+  [role="button"],
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* Live pulse on in-progress cards. */
+  @keyframes status-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+
+  .animate-status-pulse {
+    animation: status-pulse 2s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-status-pulse {
+      animation: none;
+    }
+  }
+}

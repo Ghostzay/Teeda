@@ -1,0 +1,76 @@
+import { redirect } from "next/navigation";
+import { LogOut, Sparkles } from "lucide-react";
+
+import { AppNav } from "@/components/app-nav";
+import { RealtimeRefresher } from "@/components/realtime-refresher";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { signOut } from "@/lib/actions/auth";
+import { getAuthUser, getSessionContext } from "@/lib/auth";
+
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const session = await getSessionContext();
+
+  if (!session) {
+    const user = await getAuthUser();
+    if (!user) redirect("/login");
+    return <NoSalonScreen email={user.email ?? ""} />;
+  }
+
+  const { profile, salon, isManager } = session;
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-background">
+      {/* One subscription for the whole shell — every screen stays live. */}
+      <RealtimeRefresher salonId={salon.id} />
+
+      <header className="sticky top-0 z-40 border-b border-border bg-card/85 backdrop-blur">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Sparkles className="size-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold leading-tight">{salon.name}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {profile.full_name} · {isManager ? "Manager" : "Tech"}
+            </p>
+          </div>
+
+          <AppNav isManager={isManager} variant="desktop" />
+
+          <form action={signOut}>
+            <Button variant="ghost" size="icon" type="submit" aria-label="Sign out">
+              <LogOut className="size-4" />
+            </Button>
+          </form>
+        </div>
+      </header>
+
+      {/* pb leaves room for the mobile tab bar. */}
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-4 sm:pb-8">{children}</main>
+
+      <AppNav isManager={isManager} variant="mobile" />
+    </div>
+  );
+}
+
+function NoSalonScreen({ email }: { email: string }) {
+  return (
+    <main className="flex min-h-dvh items-center justify-center px-4">
+      <Card className="w-full max-w-sm">
+        <CardContent className="space-y-4 p-6 text-center">
+          <h1 className="text-lg font-semibold">You&apos;re not on a salon yet</h1>
+          <p className="text-sm text-muted-foreground">
+            {email} is signed in but hasn&apos;t been added to a salon. Ask your manager to add you
+            from Settings, then sign in again.
+          </p>
+          <form action={signOut}>
+            <Button type="submit" variant="outline" className="w-full">
+              Sign out
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </main>
+  );
+}
