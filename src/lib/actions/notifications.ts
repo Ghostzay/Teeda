@@ -26,3 +26,36 @@ export async function markNotificationsRead(
   revalidatePath("/dashboard");
   return { ok: true };
 }
+
+/** Dismiss a single alert. Cleared alerts are gone, not just marked read. */
+export async function dismissNotification(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireSession();
+  const id = String(formData.get("notification_id") ?? "");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("dismiss_notification", { p_id: id });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/tech");
+  revalidatePath("/schedule");
+  return { ok: true };
+}
+
+/** Clear the lot. */
+export async function clearNotifications(prev: ActionState): Promise<ActionState> {
+  void prev;
+  await requireSession();
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("clear_notifications");
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/tech");
+  revalidatePath("/schedule");
+  return { ok: true, message: "Alerts cleared." };
+}

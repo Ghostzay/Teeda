@@ -9,6 +9,8 @@ export type Customer = Tables<"customers">;
 export type Job = Tables<"jobs">;
 export type Appointment = Tables<"appointments">;
 export type Payment = Tables<"payments">;
+export type TechPay = Tables<"tech_pay">;
+export type ScheduleBlock = Tables<"schedule_blocks">;
 export type Service = Tables<"services">;
 export type JobService = Tables<"job_services">;
 export type TurnCheckin = Tables<"turn_checkins">;
@@ -20,6 +22,7 @@ export type JobStatus = Enums<"job_status">;
 export type AppointmentStatus = Enums<"appointment_status">;
 export type PaymentMethod = Enums<"payment_method">;
 export type Skill = Enums<"skill">;
+export type BlockKind = Enums<"block_kind">;
 export type NotificationType = Enums<"notification_type">;
 
 /** One row of the rotation board, as returned by the `turn_queue` RPC. */
@@ -33,6 +36,18 @@ export type TechEarningsRow = FunctionReturns<"tech_earnings">[number];
 
 /** One tech's line in the manager's earnings overview. */
 export type SalonEarningsRow = FunctionReturns<"salon_earnings">[number];
+
+/** A block on the schedule, with the tech's name already joined. */
+export type ScheduleEntry = FunctionReturns<"schedule_for_range">[number];
+
+export const BLOCK_KIND_LABEL: Record<BlockKind, string> = {
+  appointment: "Appointment",
+  break: "Break",
+  unavailable: "Unavailable",
+};
+
+/** Minutes of set-up and clean-down held either side of every booking. */
+export const SCHEDULE_BUFFER_MINUTES = 5;
 
 /** Earnings keyed by window, so the UI doesn't scan an array. */
 export type TechEarnings = {
@@ -54,6 +69,7 @@ export type SessionContext = {
   profile: Profile;
   salon: Salon;
   role: UserRole;
+  isSuperAdmin: boolean;
   isManager: boolean;
   isAdmin: boolean;
   isTech: boolean;
@@ -99,12 +115,14 @@ export const APPOINTMENT_STATUS_LABEL: Record<AppointmentStatus, string> = {
 };
 
 export const ROLE_LABEL: Record<UserRole, string> = {
+  super_admin: "Owner",
   manager: "Manager",
   admin: "Admin",
   tech: "Tech",
 };
 
 export const ROLE_DESCRIPTION: Record<UserRole, string> = {
+  super_admin: "Everything a manager can do, plus creating new salons.",
   manager: "Full access, including settings, team and takings.",
   admin: "Runs the floor — check-ins, jobs, queue and payments. No settings.",
   tech: "Their own turn, clients and appointments.",

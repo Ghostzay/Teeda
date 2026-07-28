@@ -1,8 +1,12 @@
-import { Bell, CalendarClock, CalendarX, UserPlus } from "lucide-react";
+import { Bell, CalendarClock, CalendarX, UserPlus, X } from "lucide-react";
 
 import { ActionButton } from "@/components/action-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { markNotificationsRead } from "@/lib/actions/notifications";
+import {
+  clearNotifications,
+  dismissNotification,
+  markNotificationsRead,
+} from "@/lib/actions/notifications";
 import { formatRelative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { AppNotification, NotificationType } from "@/lib/types";
@@ -36,11 +40,28 @@ export function NotificationsCard({ notifications }: { notifications: AppNotific
           ) : null}
         </CardTitle>
 
-        {unread.length > 0 ? (
-          <ActionButton action={markNotificationsRead} fields={{}} variant="ghost" size="sm" silentSuccess>
-            Mark all read
+        <div className="flex items-center gap-1">
+          {unread.length > 0 ? (
+            <ActionButton
+              action={markNotificationsRead}
+              fields={{}}
+              variant="ghost"
+              size="sm"
+              silentSuccess
+            >
+              Mark read
+            </ActionButton>
+          ) : null}
+          <ActionButton
+            action={clearNotifications}
+            fields={{}}
+            variant="ghost"
+            size="sm"
+            confirm="Clear all alerts? They won't come back."
+          >
+            Clear all
           </ActionButton>
-        ) : null}
+        </div>
       </CardHeader>
 
       <CardContent className="p-0">
@@ -72,6 +93,19 @@ export function NotificationsCard({ notifications }: { notifications: AppNotific
                   ) : null}
                   <p className="text-xs text-muted-foreground">{formatRelative(item.created_at, "just now")}</p>
                 </div>
+
+                {/* Dismissing removes the alert outright — "cleared" should mean gone. */}
+                <ActionButton
+                  action={dismissNotification}
+                  fields={{ notification_id: item.id }}
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  silentSuccess
+                >
+                  <X className="size-4" />
+                  <span className="sr-only">Dismiss</span>
+                </ActionButton>
               </li>
             );
           })}

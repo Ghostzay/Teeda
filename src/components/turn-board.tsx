@@ -151,6 +151,9 @@ function TechRow({
           </p>
           {isNext ? <Badge variant="waiting">Up next</Badge> : null}
           {entry.is_busy ? <Badge variant="in_progress">With a client</Badge> : null}
+          {!entry.is_busy && entry.is_booked_now ? (
+            <Badge variant="cancelled">Booked — off rotation</Badge>
+          ) : null}
         </div>
 
         <p className="truncate text-xs text-muted-foreground">

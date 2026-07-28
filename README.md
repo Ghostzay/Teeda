@@ -22,11 +22,14 @@ Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 + shadcn/ui · Supabase
 | Skills & daily check-in | `src/lib/actions/rotation.ts`, `src/components/checkin-card.tsx` |
 | Earnings dashboards | `src/components/earnings.tsx` |
 | In-app notifications | `src/components/notifications-card.tsx` |
+| Hourly schedule (day + week) | `src/components/schedule-grid.tsx`, `/schedule` |
+| Per-tech commission rates | `src/lib/actions/commission.ts`, `/staff` |
 
 ## Roles
 
 | Role | Can do |
 | --- | --- |
+| **Super Admin** | Everything a manager can do, plus creating salons — the only role that can. |
 | **Manager** | Everything: salon settings, the team roster, takings. |
 | **Admin** | Runs the floor — check-ins, jobs, the queue, payments. No settings, no roster, no team changes. |
 | **Tech** | Their own turn, their own clients and appointments. Cannot create clients or jobs. |
@@ -77,6 +80,27 @@ the migration runs, leaving every later salon with an empty menu.
 Line items are snapshotted onto the job at checkout, so editing or deleting a
 service never rewrites what a past client was charged.
 
+## Schedule
+
+`schedule_blocks` is the single source of truth for a tech's time — booked
+work, breaks and unavailability all land in one table. Appointments write
+their own block through a trigger, so the schedule can't drift from the
+booking.
+
+The 5-minute buffer either side is maintained by the database (`blocked_from`
+/ `blocked_to`), not recomputed by each caller, and a GiST exclusion
+constraint on `(tech_id, blocked_range)` makes double-booking impossible
+rather than merely discouraged.
+
+`turn_queue` exposes `is_booked_now`, so a tech inside an appointment window —
+buffer included — drops out of the walk-in rotation for exactly that window
+and returns on their own afterwards.
+
+Day view shows every tech side by side for the floor, or just their own column
+for a tech. Week view is always one tech at a time: a week times a full roster
+is unreadable on a tablet, and the question it answers is "when is this person
+free?".
+
 ## Payments
 
 Recorded, not processed — nothing here moves money, and there is no Stripe
@@ -85,7 +109,12 @@ integration. `record_payment()` stores the service amount, tip, method
 completes the job in the same call, because the desk does both in one motion
 at the counter. One payment row per job; re-recording corrects it.
 
-Every payment stores its own `split_percent` (default 60/40), plus the
+Commission is **per tech**, held in `tech_pay` rather than on the profile —
+RLS is row-level, so a rate stored on `profiles` would be readable by everyone
+who can see the roster. A manager sees every rate; a tech sees only their own.
+A blank rate falls back to the salon default, so a new hire needs no setup.
+
+Every payment stores the rate that applied (`split_percent`) plus the
 resulting `tech_amount` and `salon_amount`. The split is stored, not derived:
 changing the house rate must never rewrite what someone already earned. Tips
 are never split — they go to the tech in full.

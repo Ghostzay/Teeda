@@ -40,8 +40,8 @@ export default async function EarningsPage({
         <header>
           <h1 className="text-2xl font-semibold tracking-tight">My earnings</h1>
           <p className="text-sm text-muted-foreground">
-            You keep {earnings.today?.split_percent ?? session.salon.tech_split_percent}% of
-            services, plus every tip.
+            Your rate is {earnings.today?.split_percent ?? session.salon.tech_split_percent}% of
+            services, plus every tip in full.
           </p>
         </header>
 

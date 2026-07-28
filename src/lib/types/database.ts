@@ -19,6 +19,8 @@ export type Database = {
           tech_split_percent: number;
           pay_period_days: number;
           pay_period_anchor: string;
+          open_hour: number;
+          close_hour: number;
         };
         Insert: {
           id?: string;
@@ -27,6 +29,8 @@ export type Database = {
           tech_split_percent?: number;
           pay_period_days?: number;
           pay_period_anchor?: string;
+          open_hour?: number;
+          close_hour?: number;
         };
         Update: {
           id?: string;
@@ -35,6 +39,8 @@ export type Database = {
           tech_split_percent?: number;
           pay_period_days?: number;
           pay_period_anchor?: string;
+          open_hour?: number;
+          close_hour?: number;
         };
         Relationships: [];
       };
@@ -498,6 +504,79 @@ export type Database = {
         };
         Relationships: [];
       };
+      tech_pay: {
+        Row: {
+          tech_id: string;
+          salon_id: string;
+          commission_percent: number | null;
+          note: string | null;
+          updated_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          tech_id: string;
+          salon_id: string;
+          commission_percent?: number | null;
+          note?: string | null;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          commission_percent?: number | null;
+          note?: string | null;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      schedule_blocks: {
+        Row: {
+          id: string;
+          salon_id: string;
+          tech_id: string;
+          kind: Database["public"]["Enums"]["block_kind"];
+          starts_at: string;
+          ends_at: string;
+          buffer_minutes: number;
+          blocked_from: string;
+          blocked_to: string;
+          appointment_id: string | null;
+          title: string | null;
+          note: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          salon_id: string;
+          tech_id: string;
+          kind?: Database["public"]["Enums"]["block_kind"];
+          starts_at: string;
+          ends_at: string;
+          buffer_minutes?: number;
+          appointment_id?: string | null;
+          title?: string | null;
+          note?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          kind?: Database["public"]["Enums"]["block_kind"];
+          starts_at?: string;
+          ends_at?: string;
+          buffer_minutes?: number;
+          title?: string | null;
+          note?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "schedule_blocks_tech_id_fkey";
+            columns: ["tech_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<never, never>;
     Functions: {
@@ -528,6 +607,7 @@ export type Database = {
           last_turn_at: string | null;
           is_busy: boolean;
           is_checked_in: boolean;
+          is_booked_now: boolean;
           has_skills: boolean;
           skills: Database["public"]["Enums"]["skill"][];
           waiting_jobs: number;
@@ -637,6 +717,7 @@ export type Database = {
         Returns: {
           tech_id: string;
           full_name: string;
+          commission_percent: number;
           services_count: number;
           service_total: number;
           tip_total: number;
@@ -648,6 +729,65 @@ export type Database = {
         Args: { p_split_percent: number; p_pay_period_days?: number | null; p_anchor?: string | null };
         Returns: Database["public"]["Tables"]["salons"]["Row"];
       };
+      is_super_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      effective_commission: {
+        Args: { p_tech_id: string };
+        Returns: number;
+      };
+      set_commission: {
+        Args: { p_tech_id: string; p_percent?: number | null; p_note?: string | null };
+        Returns: Database["public"]["Tables"]["tech_pay"]["Row"];
+      };
+      create_salon_as_owner: {
+        Args: { p_name: string };
+        Returns: Database["public"]["Tables"]["salons"]["Row"];
+      };
+      dismiss_notification: {
+        Args: { p_id: string };
+        Returns: number;
+      };
+      clear_notifications: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
+      is_booked_now: {
+        Args: { p_tech_id: string; p_at?: string };
+        Returns: boolean;
+      };
+      block_time: {
+        Args: {
+          p_tech_id: string | null;
+          p_starts_at: string;
+          p_ends_at: string;
+          p_kind?: string;
+          p_title?: string | null;
+          p_buffer?: number;
+        };
+        Returns: Database["public"]["Tables"]["schedule_blocks"]["Row"];
+      };
+      unblock_time: {
+        Args: { p_id: string };
+        Returns: number;
+      };
+      schedule_for_range: {
+        Args: { p_from: string; p_to: string; p_tech_id?: string | null };
+        Returns: {
+          id: string;
+          tech_id: string;
+          tech_name: string;
+          kind: Database["public"]["Enums"]["block_kind"];
+          starts_at: string;
+          ends_at: string;
+          blocked_from: string;
+          blocked_to: string;
+          buffer_minutes: number;
+          title: string | null;
+          appointment_id: string | null;
+        }[];
+      };
       mark_notifications_read: {
         Args: { p_ids?: string[] | null };
         Returns: number;
@@ -658,9 +798,10 @@ export type Database = {
       };
     };
     Enums: {
-      user_role: "manager" | "admin" | "tech";
+      user_role: "super_admin" | "manager" | "admin" | "tech";
       payment_method: "cash" | "card" | "other";
       skill: "manicure" | "pedicure" | "gel" | "acrylic" | "dip" | "nail_art" | "waxing" | "lash";
+      block_kind: "appointment" | "break" | "unavailable";
       notification_type:
         | "appointment_assigned"
         | "appointment_changed"

@@ -6,6 +6,8 @@ import {
   LayoutDashboard,
   ListOrdered,
   Receipt,
+  CalendarClock,
+  Building2,
   Scissors,
   Settings,
   TrendingUp,
@@ -34,6 +36,7 @@ export type NavItem = {
 const MANAGER_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", short: "Home", icon: LayoutDashboard },
   { href: "/queue", label: "Turns & Queue", short: "Queue", icon: ListOrdered },
+  { href: "/schedule", label: "Schedule", short: "Schedule", icon: CalendarClock },
   { href: "/jobs", label: "Jobs & Check-ins", short: "Check in", icon: ClipboardCheck },
   { href: "/appointments", label: "Appointments", short: "Booked", icon: CalendarDays },
   { href: "/services", label: "Services & Pricing", short: "Services", icon: Scissors },
@@ -45,6 +48,7 @@ const MANAGER_NAV: NavItem[] = [
 const ADMIN_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", short: "Home", icon: LayoutDashboard },
   { href: "/queue", label: "Turns & Queue", short: "Queue", icon: ListOrdered },
+  { href: "/schedule", label: "Schedule", short: "Schedule", icon: CalendarClock },
   { href: "/jobs", label: "Check-in / New Job", short: "Check in", icon: ClipboardCheck },
   { href: "/appointments", label: "Appointments", short: "Booked", icon: CalendarDays },
   { href: "/payments", label: "Payments", short: "Payments", icon: Receipt },
@@ -52,12 +56,19 @@ const ADMIN_NAV: NavItem[] = [
 
 const TECH_NAV: NavItem[] = [
   { href: "/tech", label: "My Turn", short: "My turn", icon: Crown },
-  { href: "/schedule", label: "My Schedule", short: "Schedule", icon: CalendarDays },
+  { href: "/schedule", label: "My Schedule", short: "Schedule", icon: CalendarClock },
   { href: "/earnings", label: "My Earnings", short: "Earnings", icon: Wallet },
   { href: "/profile", label: "Profile & Skills", short: "Profile", icon: UserCog },
 ];
 
+/** The owner's set is the manager's plus salon provisioning. */
+const OWNER_NAV: NavItem[] = [
+  ...MANAGER_NAV,
+  { href: "/salons", label: "Salons", short: "Salons", icon: Building2 },
+];
+
 export function navForRole(role: UserRole): NavItem[] {
+  if (role === "super_admin") return OWNER_NAV;
   if (role === "manager") return MANAGER_NAV;
   if (role === "admin") return ADMIN_NAV;
   return TECH_NAV;

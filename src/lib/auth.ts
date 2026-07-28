@@ -53,11 +53,13 @@ export const getSessionContext = cache(async (): Promise<SessionContext | null> 
     profile,
     salon,
     role: profile.role,
-    isManager: profile.role === "manager",
+    isSuperAdmin: profile.role === "super_admin",
+    // The owner is a manager with extra rights, not a separate track — the
+    // SQL helpers agree, so settings never lock the owner out.
+    isManager: profile.role === "manager" || profile.role === "super_admin",
     isAdmin: profile.role === "admin",
     isTech: profile.role === "tech",
-    // Manager and admin both run the floor; only manager touches settings.
-    canManageFloor: profile.role === "manager" || profile.role === "admin",
+    canManageFloor: profile.role !== "tech",
   };
 });
 

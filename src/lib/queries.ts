@@ -11,6 +11,7 @@ import type {
   PaymentTotals,
   Profile,
   SalonEarningsRow,
+  ScheduleEntry,
   Service,
   TechEarnings,
   TurnCheckin,
@@ -331,4 +332,38 @@ export async function getNotifications(limit = 15): Promise<AppNotification[]> {
 
   if (error) return [];
   return data ?? [];
+}
+
+// ---------------------------------------------------------------------------
+// Schedule and commission
+// ---------------------------------------------------------------------------
+
+/**
+ * Blocks overlapping a window, tech name attached.
+ * Pass `techId` for a single column; omit it for the whole salon.
+ */
+export async function getSchedule(
+  from: Date,
+  to: Date,
+  techId?: string | null,
+): Promise<ScheduleEntry[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("schedule_for_range", {
+    p_from: from.toISOString(),
+    p_to: to.toISOString(),
+    p_tech_id: techId ?? null,
+  });
+
+  if (error) throw new Error(`Failed to load the schedule: ${error.message}`);
+  return data ?? [];
+}
+
+/** Commission rates by tech id. Managers see everyone; a tech sees themselves. */
+export async function getCommissionRates(): Promise<Map<string, number | null>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("tech_pay").select("tech_id, commission_percent");
+
+  if (error) return new Map();
+  return new Map((data ?? []).map((row) => [row.tech_id, row.commission_percent]));
 }

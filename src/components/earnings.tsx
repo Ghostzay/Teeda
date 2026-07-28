@@ -22,7 +22,9 @@ export function TechEarningsCard({ earnings }: { earnings: TechEarnings }) {
             <Wallet className="size-4 text-primary" />
             My earnings
           </CardTitle>
-          <CardDescription>You keep {split}% of services, plus every tip.</CardDescription>
+          <CardDescription>
+            Your rate is {split}% of services, plus every tip in full.
+          </CardDescription>
         </div>
       </CardHeader>
 
@@ -140,7 +142,12 @@ export function SalonEarningsCard({
             {worked.map((row) => (
               <li key={row.tech_id} className="flex items-center gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{row.full_name}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate font-medium">{row.full_name}</p>
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold tabular-nums text-secondary-foreground">
+                      {row.commission_percent}%
+                    </span>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {row.services_count} {row.services_count === 1 ? "client" : "clients"} ·{" "}
                     {formatMoney(row.service_total)} services · {formatMoney(row.tip_total)} tips

@@ -3,6 +3,7 @@ import { UserPlus, Users } from "lucide-react";
 
 import { ActionButton, ActionSelect } from "@/components/action-button";
 import { ActionForm } from "@/components/action-form";
+import { CommissionEditor } from "@/components/commission-editor";
 import { SkillsEditor } from "@/components/skills-editor";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,8 +19,8 @@ import {
   updateStaffRole,
 } from "@/lib/actions/salon";
 import { requireManager } from "@/lib/auth";
-import { formatRelative } from "@/lib/format";
-import { getStaff, getTodayCheckins } from "@/lib/queries";
+import { formatDate, formatMoney, formatRelative } from "@/lib/format";
+import { getCommissionRates, getStaff, getTodayCheckins } from "@/lib/queries";
 import { ROLE_DESCRIPTION, ROLE_LABEL, SKILL_LABEL, type UserRole } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -27,8 +28,21 @@ export const dynamic = "force-dynamic";
 /** Staff & techs — the roster, their roles, skills and today's check-in state. */
 export default async function StaffPage() {
   const session = await requireManager();
-  const [staff, checkins] = await Promise.all([getStaff(), getTodayCheckins()]);
+  const [staff, checkins, rates] = await Promise.all([
+    getStaff(),
+    getTodayCheckins(),
+    getCommissionRates(),
+  ]);
   const techs = staff.filter((person) => person.role === "tech");
+  const houseRate = session.salon.tech_split_percent;
+
+  // Pay periods are a length plus an anchor, so "current period" is arithmetic.
+  const periodStart = currentPeriodStart(
+    session.salon.pay_period_anchor,
+    session.salon.pay_period_days,
+  );
+  const periodEnd = new Date(periodStart);
+  periodEnd.setDate(periodEnd.getDate() + session.salon.pay_period_days - 1);
 
   return (
     <div className="space-y-4">
@@ -47,6 +61,35 @@ export default async function StaffPage() {
           Turn rotation →
         </Link>
       </header>
+
+      <Card className="edge-gold">
+        <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Current pay period
+            </p>
+            <p className="font-semibold">
+              {formatDate(periodStart.toISOString())} – {formatDate(periodEnd.toISOString())}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Length
+            </p>
+            <p className="font-semibold tabular-nums">{session.salon.pay_period_days} days</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Salon default rate
+            </p>
+            <p className="font-semibold tabular-nums">{houseRate}%</p>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            A tech with no rate of their own is paid the default. On a{" "}
+            {formatMoney(100)} service that is {formatMoney(houseRate)}.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-3">
@@ -89,6 +132,19 @@ export default async function StaffPage() {
                       </p>
                     ) : null}
                   </div>
+
+                  {person.role === "tech" ? (
+                    <div className="shrink-0">
+                      <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                        Commission
+                      </p>
+                      <CommissionEditor
+                        techId={person.id}
+                        rate={rates.get(person.id) ?? null}
+                        fallback={houseRate}
+                      />
+                    </div>
+                  ) : null}
 
                   {isSelf ? null : (
                     <div className="w-32 shrink-0">
@@ -215,4 +271,14 @@ export default async function StaffPage() {
       ) : null}
     </div>
   );
+}
+
+/** Start of the pay period that contains today. */
+function currentPeriodStart(anchorDate: string, lengthDays: number): Date {
+  const anchor = new Date(`${anchorDate}T00:00:00`);
+  const today = new Date();
+  const dayMs = 86_400_000;
+  const elapsed = Math.floor((today.getTime() - anchor.getTime()) / dayMs);
+  const periods = Math.floor(elapsed / lengthDays);
+  return new Date(anchor.getTime() + periods * lengthDays * dayMs);
 }

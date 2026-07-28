@@ -77,7 +77,11 @@ export async function suggestNextTechDetailed(
 ): Promise<{ tech: TurnQueueEntry | null; reason: string }> {
   const queue = await getTurnQueue(salonId, requiredSkills);
   const onRotation = queue.filter((entry) => entry.is_checked_in);
-  const free = onRotation.filter((entry) => !entry.is_busy && entry.has_skills);
+  // A tech inside an appointment window is unavailable for a walk-in even
+  // though they aren't mid-service.
+  const free = onRotation.filter(
+    (entry) => !entry.is_busy && !entry.is_booked_now && entry.has_skills,
+  );
 
   if (queue.length === 0) {
     return { tech: null, reason: "No active technicians on the roster." };
@@ -90,7 +94,7 @@ export async function suggestNextTechDetailed(
       tech: null,
       reason: requiredSkills?.length
         ? "No free tech on rotation does this service — the client will wait."
-        : "Everyone on rotation is with a client — the job will wait in the queue.",
+        : "Everyone on rotation is with a client or in a booking — the job will wait.",
     };
   }
 

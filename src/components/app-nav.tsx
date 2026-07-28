@@ -18,7 +18,7 @@ function useIsActive() {
 }
 
 /**
- * Tablet and desktop navigation: a navy rail that's always visible.
+ * Tablet and desktop navigation: a deep eggplant rail that's always visible.
  *
  * A sidebar rather than a top bar because these roles have up to eight
  * screens — as tabs they'd wrap or truncate, and the salon's primary device
