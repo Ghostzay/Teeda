@@ -3,8 +3,19 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/types";
+
+/**
+ * Draft/staging escape hatch: create salon owners already email-confirmed and
+ * sign them straight in, so nobody has to click a link in an inbox to test.
+ *
+ * Requires SUPABASE_SERVICE_ROLE_KEY (the auth admin API). Set
+ * AUTH_AUTO_CONFIRM=false before going live so real owners verify their email.
+ */
+const AUTO_CONFIRM =
+  process.env.AUTH_AUTO_CONFIRM !== "false" && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 export async function signIn(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const email = String(formData.get("email") ?? "").trim();
@@ -37,18 +48,52 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
   const fullName = String(formData.get("full_name") ?? "").trim();
   const salonName = String(formData.get("salon_name") ?? "").trim();
 
-  if (!email || !password || !fullName || !salonName) {
-    return { ok: false, error: "All fields are required." };
+  // Name the missing field — "all fields are required" is useless on a 4-field form.
+  const missing = [
+    !salonName && "salon name",
+    !fullName && "your name",
+    !email && "email",
+    !password && "password",
+  ].filter(Boolean);
+
+  if (missing.length) {
+    return { ok: false, error: `Still needed: ${missing.join(", ")}.` };
   }
   if (password.length < 8) {
     return { ok: false, error: "Use at least 8 characters for your password." };
   }
 
   const supabase = await createClient();
+  const metadata = { full_name: fullName, salon_name: salonName };
+
+  if (AUTO_CONFIRM) {
+    // Pre-confirm through the admin API, then sign in normally so the session
+    // cookies are set by the SSR client. The handle_new_user trigger creates
+    // the salon and manager profile either way.
+    const { error: adminError } = await createAdminClient().auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: metadata,
+    });
+
+    if (adminError) {
+      return { ok: false, error: adminError.message };
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) {
+      return { ok: true, message: "Account created — sign in to continue." };
+    }
+
+    revalidatePath("/", "layout");
+    redirect("/dashboard");
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName, salon_name: salonName } },
+    options: { data: metadata },
   });
 
   if (error) {

@@ -1,0 +1,12 @@
+project_id = "teeda"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000"]
+
+[auth.email]
+enable_signup = true
+# Draft mode: no verification link when running `supabase start` locally.
+# Turn this on before going live (and set AUTH_AUTO_CONFIRM=false in the app).
+enable_confirmations = false

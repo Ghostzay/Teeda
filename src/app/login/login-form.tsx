@@ -36,8 +36,14 @@ export function LoginForm({ next }: { next: string }) {
           ))}
         </div>
 
+        {/*
+          `key` is load-bearing: both branches render an <ActionForm> at the
+          same tree position, so without it React reuses the instance and its
+          useActionState hook — the form keeps posting to whichever action was
+          bound on first mount, and switching tabs silently calls the wrong one.
+        */}
         {mode === "signin" ? (
-          <ActionForm action={signIn} resetOnSuccess={false} className="space-y-4">
+          <ActionForm key="signin" action={signIn} resetOnSuccess={false} className="space-y-4">
             <input type="hidden" name="next" value={next} />
             <Field
               id="email"
@@ -61,7 +67,7 @@ export function LoginForm({ next }: { next: string }) {
             </SubmitButton>
           </ActionForm>
         ) : (
-          <ActionForm action={signUp} resetOnSuccess={false} className="space-y-4">
+          <ActionForm key="signup" action={signUp} resetOnSuccess={false} className="space-y-4">
             <Field id="salon_name" name="salon_name" label="Salon name" placeholder="Polished Nail Bar" required />
             <Field id="full_name" name="full_name" label="Your name" placeholder="Alex Tran" required />
             <Field

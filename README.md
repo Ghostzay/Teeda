@@ -67,8 +67,21 @@ manager. Add technicians from `/settings`.
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | client + server | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | client + server | Anon key (RLS applies) |
-| `SUPABASE_SERVICE_ROLE_KEY` | **server only** | Creating tech logins from `/settings` |
+| `SUPABASE_SERVICE_ROLE_KEY` | **server only** | Creating tech logins from `/settings`; pre-confirming owners |
+| `AUTH_AUTO_CONFIRM` | server only | `true` (default) skips email verification on signup |
 | `SUPABASE_PROJECT_ID` | local only | `npm run types:gen` |
+
+#### Email verification
+
+While drafting, `AUTH_AUTO_CONFIRM` (on by default whenever
+`SUPABASE_SERVICE_ROLE_KEY` is set) creates salon owners already confirmed via
+the auth admin API and signs them straight in — no link to click. Technician
+logins created from `/settings` are confirmed the same way.
+
+**Before going live**, set `AUTH_AUTO_CONFIRM=false` so real owners verify their
+email. Signup then falls back to the standard flow and honours whatever
+*Confirm email* is set to in Supabase → Authentication → Sign In / Providers →
+Email.
 
 The service role key bypasses RLS. It is only read inside
 `src/lib/supabase/admin.ts`, from server actions that have already verified the
