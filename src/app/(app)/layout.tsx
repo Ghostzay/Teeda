@@ -4,7 +4,6 @@ import { LogOut, Sparkles } from "lucide-react";
 import { AppNav } from "@/components/app-nav";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { signOut } from "@/lib/actions/auth";
 import { getAuthUser, getSessionContext } from "@/lib/auth";
 
@@ -14,7 +13,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!session) {
     const user = await getAuthUser();
     if (!user) redirect("/login");
-    return <NoSalonScreen email={user.email ?? ""} />;
+    // Signed in with no salon: onboarding, not a dead end.
+    redirect("/welcome");
   }
 
   const { profile, salon, isManager } = session;
@@ -54,23 +54,3 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   );
 }
 
-function NoSalonScreen({ email }: { email: string }) {
-  return (
-    <main className="flex min-h-dvh items-center justify-center px-4">
-      <Card className="w-full max-w-sm">
-        <CardContent className="space-y-4 p-6 text-center">
-          <h1 className="text-lg font-semibold">You&apos;re not on a salon yet</h1>
-          <p className="text-sm text-muted-foreground">
-            {email} is signed in but hasn&apos;t been added to a salon. Ask your manager to add you
-            from Settings, then sign in again.
-          </p>
-          <form action={signOut}>
-            <Button type="submit" variant="outline" className="w-full">
-              Sign out
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </main>
-  );
-}

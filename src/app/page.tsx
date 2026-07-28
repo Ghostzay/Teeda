@@ -10,9 +10,9 @@ export default async function RootPage() {
     redirect(session.isManager ? "/dashboard" : "/tech");
   }
 
+  // Signed in but not attached to a salon yet — finish setting one up.
   const user = await getAuthUser();
-  // Signed in but not attached to a salon yet — the app shell explains why.
-  if (user) redirect("/tech");
+  if (user) redirect("/welcome");
 
   redirect("/login");
 }

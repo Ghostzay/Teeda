@@ -89,7 +89,7 @@ export function TurnBoard({
                   </div>
 
                   <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
-                    #{entry.position}
+                    #{entry.queue_position}
                   </span>
 
                   {showResetControl ? (

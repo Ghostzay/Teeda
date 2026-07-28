@@ -254,6 +254,10 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
       };
+      bootstrap_salon: {
+        Args: { p_salon_name: string; p_full_name?: string | null };
+        Returns: string;
+      };
       turn_queue: {
         Args: { p_salon_id?: string | null };
         Returns: {
@@ -263,7 +267,7 @@ export type Database = {
           is_busy: boolean;
           waiting_jobs: number;
           jobs_today: number;
-          position: number;
+          queue_position: number;
         }[];
       };
       suggest_next_tech: {

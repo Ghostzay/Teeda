@@ -84,7 +84,7 @@ export async function getTurnPosition(
   const entry = queue.find((row) => row.tech_id === techId) ?? null;
 
   return {
-    position: entry?.position ?? null,
+    position: entry?.queue_position ?? null,
     total: queue.length,
     entry,
   };

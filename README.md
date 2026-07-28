@@ -43,13 +43,17 @@ npm install
 cp .env.example .env.local     # fill in your Supabase keys
 ```
 
-Apply the schema — either paste `supabase/migrations/20260728000000_init.sql`
-into the Supabase SQL editor, or:
+Apply the schema — run **both** files in `supabase/migrations/`, in filename
+order, either by pasting them into the Supabase SQL editor or with:
 
 ```bash
 supabase link --project-ref <your-ref>
 supabase db push
 ```
+
+Signing up creates your salon and drops you straight into the dashboard. If a
+signed-in account has no salon yet, `/welcome` picks it up and creates one —
+no account can get stranded.
 
 Then:
 
@@ -118,6 +122,24 @@ rows their policies allow.
   `ActionForm` / `ActionButton`.
 - All turn mutations go through RPCs (`start_job`, `complete_job`, `assign_job`)
   that re-check authorization server-side, independent of the UI.
+
+## Troubleshooting
+
+**"The database isn't set up yet"** on `/welcome` — the migrations haven't been
+applied to this project. Run both files in `supabase/migrations/`.
+
+**Signup works but you land on `/welcome` every time** — the salon insert is
+failing. Check the Supabase logs; the most common cause is only the first
+migration having been applied.
+
+**`permission denied for table …`** — the `authenticated` role is missing table
+grants (happens if the `public` schema was recreated). The second migration
+grants them explicitly; re-run it.
+
+Creating a trigger on `auth.users` needs elevated privileges and can fail
+depending on how you run the SQL. That's survivable by design: both migrations
+wrap it in an exception handler, and the app creates salons through
+`public.bootstrap_salon()` regardless.
 
 ## Deploying to Vercel
 

@@ -179,9 +179,23 @@ begin
 end;
 $$;
 
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+-- Attaching a trigger to `auth.users` requires elevated privileges. If this
+-- role doesn't have them, don't take the rest of the migration down with it —
+-- the app bootstraps salons through public.bootstrap_salon() as well.
+do $$
+begin
+  begin
+    create trigger on_auth_user_created
+      after insert on auth.users
+      for each row execute function public.handle_new_user();
+  exception
+    when others then
+      raise notice
+        'Could not attach the auth.users trigger (%). Signup falls back to public.bootstrap_salon().',
+        sqlerrm;
+  end;
+end;
+$$;
 
 -- ----------------------------------------------------------------------------
 -- Job triggers: keep updated_at honest and advance the turn clock.
@@ -247,7 +261,7 @@ returns table (
   is_busy       boolean,
   waiting_jobs  integer,
   jobs_today    integer,
-  position      integer
+  queue_position integer
 )
 language sql
 stable
@@ -304,7 +318,7 @@ as $$
   select tech_id
   from public.turn_queue(p_salon_id)
   where not is_busy
-  order by position
+  order by queue_position
   limit 1;
 $$;
 

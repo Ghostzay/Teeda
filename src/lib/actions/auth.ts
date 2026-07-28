@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
+import { ensureSalon } from "@/lib/actions/onboarding";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/types";
@@ -86,8 +87,11 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
       return { ok: true, message: "Account created — sign in to continue." };
     }
 
+    // Create the salon here rather than trusting the auth trigger fired.
+    const ready = await ensureSalon(salonName, fullName);
+
     revalidatePath("/", "layout");
-    redirect("/dashboard");
+    redirect(ready ? "/dashboard" : "/welcome");
   }
 
   const { data, error } = await supabase.auth.signUp({
@@ -104,8 +108,10 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
     return { ok: true, message: "Check your email to confirm your account, then sign in." };
   }
 
+  const ready = await ensureSalon(salonName, fullName);
+
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect(ready ? "/dashboard" : "/welcome");
 }
 
 export async function signOut() {
