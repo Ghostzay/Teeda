@@ -243,6 +243,70 @@ export type Database = {
           },
         ];
       };
+      payments: {
+        Row: {
+          id: string;
+          salon_id: string;
+          job_id: string;
+          tech_id: string | null;
+          service_amount: number;
+          tip_amount: number;
+          method: Database["public"]["Enums"]["payment_method"];
+          note: string | null;
+          recorded_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          salon_id: string;
+          job_id: string;
+          tech_id?: string | null;
+          service_amount?: number;
+          tip_amount?: number;
+          method?: Database["public"]["Enums"]["payment_method"];
+          note?: string | null;
+          recorded_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          salon_id?: string;
+          job_id?: string;
+          tech_id?: string | null;
+          service_amount?: number;
+          tip_amount?: number;
+          method?: Database["public"]["Enums"]["payment_method"];
+          note?: string | null;
+          recorded_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payments_job_id_fkey";
+            columns: ["job_id"];
+            isOneToOne: true;
+            referencedRelation: "jobs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payments_tech_id_fkey";
+            columns: ["tech_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payments_salon_id_fkey";
+            columns: ["salon_id"];
+            isOneToOne: false;
+            referencedRelation: "salons";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<never, never>;
     Functions: {
@@ -251,6 +315,10 @@ export type Database = {
         Returns: string;
       };
       is_manager: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      can_manage_floor: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
       };
@@ -294,9 +362,39 @@ export type Database = {
         Args: { p_tech_id: string };
         Returns: undefined;
       };
+      skip_job: {
+        Args: { p_job_id: string };
+        Returns: Database["public"]["Tables"]["jobs"]["Row"];
+      };
+      record_payment: {
+        Args: {
+          p_job_id: string;
+          p_service_amount: number;
+          p_tip_amount?: number;
+          p_method?: string;
+          p_tech_id?: string | null;
+          p_note?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["payments"]["Row"];
+      };
+      payment_totals_today: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          service_total: number;
+          tip_total: number;
+          payment_count: number;
+          cash_total: number;
+          card_total: number;
+        }[];
+      };
+      my_tips_today: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
     };
     Enums: {
-      user_role: "manager" | "tech";
+      user_role: "manager" | "admin" | "tech";
+      payment_method: "cash" | "card" | "other";
       job_type: "walk-in" | "appointment";
       job_status: "waiting" | "in_progress" | "completed" | "cancelled";
       appointment_status: "scheduled" | "checked_in" | "completed" | "cancelled";

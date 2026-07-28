@@ -23,13 +23,11 @@ export function JobForm({
   techs,
   salonId,
   suggestedTechName,
-  isManager,
 }: {
   customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
   salonId: string;
   suggestedTechName: string | null;
-  isManager: boolean;
 }) {
   const [isNewCustomer, setIsNewCustomer] = useState(customers.length === 0);
   const [photoUrl, setPhotoUrl] = useState("");
@@ -143,7 +141,7 @@ export function JobForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="tech_id">Technician</Label>
-        <Select id="tech_id" name="tech_id" defaultValue="auto" disabled={!isManager}>
+        <Select id="tech_id" name="tech_id" defaultValue="auto">
           <option value="auto">
             Next in rotation{suggestedTechName ? ` — ${suggestedTechName}` : ""}
           </option>
@@ -155,9 +153,7 @@ export function JobForm({
           ))}
         </Select>
         <p className="text-xs text-muted-foreground">
-          {isManager
-            ? "Rotation picks the free tech who has waited longest. Override any time."
-            : "The rotation assigns this client automatically."}
+          Rotation picks the free tech who has waited longest. Override any time.
         </p>
       </div>
 
@@ -198,7 +194,7 @@ export function JobForm({
       </div>
 
       <SubmitButton size="lg" className="w-full" disabled={uploading}>
-        Check in client
+        Check in walk-in
       </SubmitButton>
     </ActionForm>
   );

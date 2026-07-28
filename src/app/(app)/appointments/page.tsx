@@ -114,7 +114,7 @@ export default async function AppointmentsPage({
                         ) : null}
                       </div>
 
-                      {session.isManager && appointment.status === "scheduled" ? (
+                      {session.canManageFloor && appointment.status === "scheduled" ? (
                         <div className="flex shrink-0 gap-2">
                           <ActionButton
                             action={checkInAppointment}
@@ -140,7 +140,7 @@ export default async function AppointmentsPage({
           </Card>
         </div>
 
-        {session.isManager ? (
+        {session.canManageFloor ? (
           <Card className="lg:sticky lg:top-20 lg:self-start">
             <CardHeader>
               <CardTitle>Book an appointment</CardTitle>

@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireManager, requireSession } from "@/lib/auth";
+import { requireFloorAccess, requireManager } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/types";
 
 export async function upsertCustomer(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireSession();
+  const session = await requireFloorAccess();
   const supabase = await createClient();
 
   const id = String(formData.get("id") ?? "").trim();

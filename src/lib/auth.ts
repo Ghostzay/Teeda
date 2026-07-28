@@ -52,7 +52,12 @@ export const getSessionContext = cache(async (): Promise<SessionContext | null> 
     email: user.email ?? "",
     profile,
     salon,
+    role: profile.role,
     isManager: profile.role === "manager",
+    isAdmin: profile.role === "admin",
+    isTech: profile.role === "tech",
+    // Manager and admin both run the floor; only manager touches settings.
+    canManageFloor: profile.role === "manager" || profile.role === "admin",
   };
 });
 
@@ -63,9 +68,16 @@ export async function requireSession(): Promise<SessionContext> {
   return session;
 }
 
-/** Use in manager-only pages/actions. */
+/** Manager only — salon settings, the team roster, takings. */
 export async function requireManager(): Promise<SessionContext> {
   const session = await requireSession();
-  if (!session.isManager) redirect("/tech");
+  if (!session.isManager) redirect(session.canManageFloor ? "/dashboard" : "/tech");
+  return session;
+}
+
+/** Manager or admin — check-ins, jobs, the queue, payments. */
+export async function requireFloorAccess(): Promise<SessionContext> {
+  const session = await requireSession();
+  if (!session.canManageFloor) redirect("/tech");
   return session;
 }

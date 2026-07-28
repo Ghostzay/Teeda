@@ -1,6 +1,7 @@
-import { CalendarClock, Footprints, Phone, StickyNote, UserRound } from "lucide-react";
+import { CalendarClock, Check, Footprints, Phone, Receipt, StickyNote, UserRound, X } from "lucide-react";
 
 import { ActionButton, ActionSelect } from "@/components/action-button";
+import { PaymentDialog } from "@/components/payment-dialog";
 import { STATUS_RAIL, StatusBadge } from "@/components/status-badge";
 import { Card } from "@/components/ui/card";
 import {
@@ -8,32 +9,41 @@ import {
   assignNextTechAction,
   cancelJobAction,
   completeJobAction,
+  skipJobAction,
   startJobAction,
 } from "@/lib/actions/jobs";
-import { formatDuration, formatPhone, formatTime } from "@/lib/format";
+import { formatDuration, formatMoney, formatPhone, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { JobWithRelations, Profile } from "@/lib/types";
+import { PAYMENT_METHOD_LABEL, type JobWithRelations, type Profile } from "@/lib/types";
 
 /**
- * One client on the floor. Status is legible three ways — color rail, badge,
- * and the elapsed timer — so a manager can read the room at a glance.
+ * One client on the floor. Status is legible three ways — colour rail, badge
+ * and elapsed timer — so a manager can read the room at a glance.
+ *
+ * Button wording is deliberately literal about what happens next:
+ *   "Accept" / "Pass"          a tech taking or declining their turn
+ *   "Start appointment"        a booked client whose tech is starting work
+ *   "Take payment"             the desk closing the client out
  */
 export function JobCard({
   job,
   techs,
-  isManager,
+  canManageFloor,
   currentUserId,
+  showTurnActions = false,
   className,
 }: {
   job: JobWithRelations;
   techs: Profile[];
-  isManager: boolean;
+  canManageFloor: boolean;
   currentUserId: string;
+  /** Renders the large Accept / Pass pair — the tech's own queue. */
+  showTurnActions?: boolean;
   className?: string;
 }) {
   const isMine = job.tech_id === currentUserId;
-  const canWork = isManager || isMine || (job.tech_id === null && job.status === "waiting");
-  const isOpen = job.status === "waiting" || job.status === "in_progress";
+  const canWork = canManageFloor || isMine || (job.tech_id === null && job.status === "waiting");
+  const isBooked = job.type === "appointment";
 
   const elapsed =
     job.status === "in_progress"
@@ -41,6 +51,8 @@ export function JobCard({
       : job.status === "waiting"
         ? `Waiting ${formatDuration(job.checked_in_at)}`
         : `Finished ${formatTime(job.completed_at)}`;
+
+  const startLabel = isBooked ? "Start appointment" : "Start service";
 
   return (
     <Card className={cn("overflow-hidden", STATUS_RAIL[job.status], className)}>
@@ -57,16 +69,12 @@ export function JobCard({
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
-            {job.type === "appointment" ? (
-              <CalendarClock className="size-3.5" />
-            ) : (
-              <Footprints className="size-3.5" />
-            )}
-            {job.type === "appointment" ? "Appointment" : "Walk-in"}
+            {isBooked ? <CalendarClock className="size-3.5" /> : <Footprints className="size-3.5" />}
+            {isBooked ? "Booked appointment" : "Walk-in"}
           </span>
           <span className="inline-flex items-center gap-1">
             <UserRound className="size-3.5" />
-            {job.tech?.full_name ?? "Unassigned"}
+            {job.tech?.full_name ?? "Nobody yet"}
           </span>
           {job.customer?.phone ? (
             <a
@@ -98,20 +106,60 @@ export function JobCard({
           />
         ) : null}
 
-        {isOpen ? (
+        {/* Payment summary, once recorded. Techs only see this on their own jobs. */}
+        {job.payment ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-completed/30 bg-completed-bg/60 px-3 py-2 text-sm">
+            <span className="inline-flex items-center gap-1.5 font-medium text-completed">
+              <Receipt className="size-3.5" />
+              {formatMoney(Number(job.payment.service_amount) + Number(job.payment.tip_amount))} paid
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {formatMoney(job.payment.service_amount)} service ·{" "}
+              {formatMoney(job.payment.tip_amount)} tip · {PAYMENT_METHOD_LABEL[job.payment.method]}
+            </span>
+          </div>
+        ) : null}
+
+        {/* The tech's own turn: two large, unmistakable choices. */}
+        {showTurnActions && job.status === "waiting" && isMine ? (
+          <div className="grid grid-cols-2 gap-2">
+            <ActionButton
+              action={startJobAction}
+              fields={{ job_id: job.id, tech_id: currentUserId }}
+              size="lg"
+              className="[&>button]:h-16 [&>button]:w-full [&>button]:text-base"
+            >
+              <Check className="size-5" />
+              Accept
+            </ActionButton>
+            <ActionButton
+              action={skipJobAction}
+              fields={{ job_id: job.id }}
+              variant="outline"
+              size="lg"
+              confirm="Pass on this client? You'll move to the back of the rotation."
+              className="[&>button]:h-16 [&>button]:w-full [&>button]:text-base"
+            >
+              <X className="size-5" />
+              Pass
+            </ActionButton>
+          </div>
+        ) : null}
+
+        {job.status === "waiting" || job.status === "in_progress" ? (
           <div className="flex flex-wrap items-center gap-2">
-            {job.status === "waiting" && canWork ? (
+            {job.status === "waiting" && canWork && !(showTurnActions && isMine) ? (
               <ActionButton
                 action={startJobAction}
-                fields={{ job_id: job.id, tech_id: isManager ? job.tech_id : currentUserId }}
+                fields={{ job_id: job.id, tech_id: canManageFloor ? job.tech_id : currentUserId }}
                 size="lg"
                 className="flex-1 [&>button]:w-full"
               >
-                Start
+                {startLabel}
               </ActionButton>
             ) : null}
 
-            {job.status === "waiting" && !job.tech_id && isManager ? (
+            {job.status === "waiting" && !job.tech_id && canManageFloor ? (
               <ActionButton
                 action={assignNextTechAction}
                 fields={{ job_id: job.id }}
@@ -119,11 +167,15 @@ export function JobCard({
                 size="lg"
                 className="flex-1 [&>button]:w-full"
               >
-                Assign next up
+                Give to next in rotation
               </ActionButton>
             ) : null}
 
-            {job.status === "in_progress" && canWork ? (
+            {job.status === "in_progress" && canManageFloor ? (
+              <PaymentDialog job={job} techs={techs} />
+            ) : null}
+
+            {job.status === "in_progress" && canWork && !canManageFloor ? (
               <ActionButton
                 action={completeJobAction}
                 fields={{ job_id: job.id }}
@@ -131,17 +183,17 @@ export function JobCard({
                 size="lg"
                 className="flex-1 [&>button]:w-full"
               >
-                Complete
+                Finish
               </ActionButton>
             ) : null}
 
-            {isManager ? (
+            {canManageFloor ? (
               <ActionButton
                 action={cancelJobAction}
                 fields={{ job_id: job.id }}
                 variant="ghost"
                 size="lg"
-                confirm="Cancel this job?"
+                confirm="Cancel this client?"
               >
                 Cancel
               </ActionButton>
@@ -149,16 +201,21 @@ export function JobCard({
           </div>
         ) : null}
 
+        {/* Finished but unpaid — the desk still needs to take money. */}
+        {job.status === "completed" && canManageFloor && !job.payment ? (
+          <PaymentDialog job={job} techs={techs} variant="outline" />
+        ) : null}
+
         {/* Manual override: the suggestion is a default, never a lock-in. */}
-        {isManager && job.status === "waiting" ? (
+        {canManageFloor && job.status === "waiting" ? (
           <ActionSelect
             action={assignJobAction}
             fields={{ job_id: job.id }}
             name="tech_id"
             value={job.tech_id ?? "unassigned"}
-            aria-label={`Assign a tech to ${job.customer?.name ?? "this job"}`}
+            aria-label={`Assign a tech to ${job.customer?.name ?? "this client"}`}
           >
-            <option value="unassigned">Unassigned — anyone can claim</option>
+            <option value="unassigned">Nobody yet — any tech can claim</option>
             {techs.map((tech) => (
               <option key={tech.id} value={tech.id}>
                 {tech.full_name}

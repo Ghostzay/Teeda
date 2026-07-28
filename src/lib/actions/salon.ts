@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireManager } from "@/lib/auth";
+import { requireFloorAccess, requireManager } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { resetTurn } from "@/lib/turn";
@@ -111,7 +111,8 @@ export async function updateStaffRole(_prev: ActionState, formData: FormData): P
 
 /** Send a tech to the back of the rotation (e.g. returning from a long break). */
 export async function resetTurnAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireManager();
+  // Queue management is floor work — admins do this too.
+  await requireFloorAccess();
   const id = String(formData.get("staff_id") ?? "");
 
   try {

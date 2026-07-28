@@ -31,7 +31,7 @@ export default async function CustomersPage({
             {q ? ` matching “${q}”` : ""}
           </p>
         </div>
-        {session.isManager ? <CustomerDialog /> : null}
+        {session.canManageFloor ? <CustomerDialog /> : null}
       </header>
 
       {/* GET form: search state lives in the URL, so it survives a refresh. */}
@@ -77,9 +77,10 @@ export default async function CustomersPage({
                       <p className="text-sm text-muted-foreground">No phone on file</p>
                     )}
                   </div>
-                  {session.isManager ? (
+                  {session.canManageFloor ? (
                     <div className="flex shrink-0 items-center">
                       <CustomerDialog customer={customer} />
+                      {session.isManager ? (
                       <ActionButton
                         action={deleteCustomer}
                         fields={{ id: customer.id }}
@@ -90,6 +91,7 @@ export default async function CustomersPage({
                         <span aria-hidden>×</span>
                         <span className="sr-only">Delete {customer.name}</span>
                       </ActionButton>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>

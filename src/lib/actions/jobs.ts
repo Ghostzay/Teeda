@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireManager, requireSession } from "@/lib/auth";
+import { requireFloorAccess, requireSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { assignJob, completeJob, startJob, suggestNextTech } from "@/lib/turn";
+import { assignJob, completeJob, skipJob, startJob, suggestNextTech } from "@/lib/turn";
 import type { ActionState, JobType } from "@/lib/types";
 
 /** Every screen shows some slice of the queue, so refresh them together. */
@@ -20,11 +20,12 @@ function fail(error: unknown): ActionState {
 }
 
 /**
- * Check a client in. If no tech is chosen the rotation picks one, so the
- * fair-turn default applies even when the front desk is in a hurry.
+ * Check a walk-in client in. Front desk only — techs never create clients or
+ * jobs. If no tech is chosen the rotation picks one, so the fair path is the
+ * path of least resistance even when the desk is busy.
  */
 export async function createJob(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireSession();
+  const session = await requireFloorAccess();
   const supabase = await createClient();
 
   const type = (String(formData.get("type") ?? "walk-in") as JobType) satisfies JobType;
@@ -41,7 +42,7 @@ export async function createJob(_prev: ActionState, formData: FormData): Promise
 
   // Walk-ins usually mean a customer record that doesn't exist yet.
   if (!customerId) {
-    if (!newCustomerName) return { ok: false, error: "Choose an existing customer or enter a name." };
+    if (!newCustomerName) return { ok: false, error: "Choose an existing client or enter a name." };
 
     const { data: customer, error: customerError } = await supabase
       .from("customers")
@@ -79,10 +80,10 @@ export async function createJob(_prev: ActionState, formData: FormData): Promise
 
   revalidateQueue();
   revalidatePath("/customers");
-  return { ok: true, message: "Client checked in." };
+  return { ok: true, message: "Checked in — they're in the queue." };
 }
 
-/** Manager override of the suggested tech (or `unassigned` to release a job). */
+/** Front-desk override of the suggested tech (or `unassigned` to release it). */
 export async function assignJobAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireSession();
 
@@ -97,15 +98,15 @@ export async function assignJobAction(_prev: ActionState, formData: FormData): P
   }
 
   revalidateQueue();
-  return { ok: true, message: techId ? "Job assigned." : "Job returned to the queue." };
+  return { ok: true, message: techId ? "Assigned." : "Back in the open queue." };
 }
 
-/** Assign the job to whoever the rotation says is up next. */
+/** Hand the client to whoever the rotation says is up next. */
 export async function assignNextTechAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await requireManager();
+  const session = await requireFloorAccess();
   const jobId = String(formData.get("job_id") ?? "");
 
   try {
@@ -119,10 +120,12 @@ export async function assignNextTechAction(
   }
 
   revalidateQueue();
-  return { ok: true, message: "Assigned to the next tech in rotation." };
+  return { ok: true, message: "Given to the next tech in rotation." };
 }
 
-/** Start work — this is the action that consumes a turn. */
+/**
+ * Accept the client and start the service — the action that consumes a turn.
+ */
 export async function startJobAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireSession();
 
@@ -136,7 +139,25 @@ export async function startJobAction(_prev: ActionState, formData: FormData): Pr
   }
 
   revalidateQueue();
-  return { ok: true, message: "Job started." };
+  return { ok: true, message: "Started — the client is yours." };
+}
+
+/**
+ * Pass on a client. Costs the tech their place in the rotation and offers the
+ * client to whoever is next.
+ */
+export async function skipJobAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireSession();
+  const jobId = String(formData.get("job_id") ?? "");
+
+  try {
+    await skipJob(jobId);
+  } catch (error) {
+    return fail(error);
+  }
+
+  revalidateQueue();
+  return { ok: true, message: "Passed on — you've moved to the back of the rotation." };
 }
 
 export async function completeJobAction(
@@ -153,11 +174,11 @@ export async function completeJobAction(
   }
 
   revalidateQueue();
-  return { ok: true, message: "Job completed." };
+  return { ok: true, message: "Finished." };
 }
 
 export async function cancelJobAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireManager();
+  const session = await requireFloorAccess();
   const supabase = await createClient();
   const jobId = String(formData.get("job_id") ?? "");
 
@@ -182,5 +203,5 @@ export async function cancelJobAction(_prev: ActionState, formData: FormData): P
   }
 
   revalidateQueue();
-  return { ok: true, message: "Job cancelled." };
+  return { ok: true, message: "Cancelled." };
 }

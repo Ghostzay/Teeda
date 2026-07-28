@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireManager } from "@/lib/auth";
+import { requireFloorAccess } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/types";
 
@@ -10,7 +10,7 @@ export async function createAppointment(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await requireManager();
+  const session = await requireFloorAccess();
   const supabase = await createClient();
 
   const serviceName = String(formData.get("service_name") ?? "").trim();
@@ -74,7 +74,7 @@ export async function checkInAppointment(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireManager();
+  await requireFloorAccess();
   const supabase = await createClient();
   const id = String(formData.get("appointment_id") ?? "");
 
@@ -93,7 +93,7 @@ export async function cancelAppointment(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await requireManager();
+  const session = await requireFloorAccess();
   const supabase = await createClient();
   const id = String(formData.get("appointment_id") ?? "");
 

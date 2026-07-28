@@ -7,7 +7,7 @@ export default async function RootPage() {
   const session = await getSessionContext();
 
   if (session) {
-    redirect(session.isManager ? "/dashboard" : "/tech");
+    redirect(session.canManageFloor ? "/dashboard" : "/tech");
   }
 
   // Signed in but not attached to a salon yet — finish setting one up.

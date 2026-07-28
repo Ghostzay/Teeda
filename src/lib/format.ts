@@ -67,6 +67,13 @@ export function formatPhone(phone: string | null | undefined): string {
   return phone;
 }
 
+export function formatMoney(amount: number | string | null | undefined): string {
+  const value = Number(amount ?? 0);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+    Number.isFinite(value) ? value : 0,
+  );
+}
+
 export function initials(name: string): string {
   return name
     .trim()

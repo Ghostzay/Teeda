@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 
-type Table = "jobs" | "profiles" | "appointments";
+type Table = "jobs" | "profiles" | "appointments" | "payments";
 
 /**
  * The only always-on client component in the app.
@@ -20,7 +20,7 @@ type Table = "jobs" | "profiles" | "appointments";
  */
 export function RealtimeRefresher({
   salonId,
-  tables = ["jobs", "profiles", "appointments"],
+  tables = ["jobs", "profiles", "appointments", "payments"],
 }: {
   salonId: string;
   tables?: Table[];

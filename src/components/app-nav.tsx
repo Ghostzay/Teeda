@@ -6,17 +6,18 @@ import { CalendarDays, LayoutDashboard, ListChecks, Settings, User, Users } from
 
 import { cn } from "@/lib/utils";
 
-const MANAGER_LINKS = [
+const FLOOR_LINKS = [
   { href: "/dashboard", label: "Floor", icon: LayoutDashboard },
-  { href: "/jobs", label: "Jobs", icon: ListChecks },
+  { href: "/jobs", label: "Check in", icon: ListChecks },
   { href: "/appointments", label: "Booked", icon: CalendarDays },
   { href: "/customers", label: "Clients", icon: Users },
-  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+const SETTINGS_LINK = { href: "/settings", label: "Settings", icon: Settings };
+
+/** Techs get two screens: their turn, and the client book (read-only). */
 const TECH_LINKS = [
   { href: "/tech", label: "My turn", icon: User },
-  { href: "/jobs", label: "Jobs", icon: ListChecks },
   { href: "/customers", label: "Clients", icon: Users },
 ];
 
@@ -26,14 +27,21 @@ const TECH_LINKS = [
  * primary device is a tablet on a stand, so navigation lives under the thumb.
  */
 export function AppNav({
+  canManageFloor,
   isManager,
   variant,
 }: {
+  canManageFloor: boolean;
   isManager: boolean;
   variant: "desktop" | "mobile";
 }) {
   const pathname = usePathname();
-  const links = isManager ? MANAGER_LINKS : TECH_LINKS;
+  // Admins run the floor but never see Settings.
+  const links = canManageFloor
+    ? isManager
+      ? [...FLOOR_LINKS, SETTINGS_LINK]
+      : FLOOR_LINKS
+    : TECH_LINKS;
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 

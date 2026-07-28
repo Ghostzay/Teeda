@@ -19,6 +19,7 @@ import {
 import { requireManager } from "@/lib/auth";
 import { formatRelative } from "@/lib/format";
 import { getStaff } from "@/lib/queries";
+import { ROLE_DESCRIPTION, ROLE_LABEL, type UserRole } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -106,9 +107,13 @@ export default async function SettingsPage() {
             <div className="space-y-1.5">
               <Label htmlFor="staff_role">Role</Label>
               <Select id="staff_role" name="role" defaultValue="tech">
-                <option value="tech">Tech</option>
-                <option value="manager">Manager</option>
+                {(Object.keys(ROLE_LABEL) as UserRole[]).map((role) => (
+                  <option key={role} value={role}>
+                    {ROLE_LABEL[role]}
+                  </option>
+                ))}
               </Select>
+              <p className="text-xs text-muted-foreground">{ROLE_DESCRIPTION.admin}</p>
             </div>
             <div className="sm:col-span-2">
               <SubmitButton size="lg" className="w-full sm:w-auto">
@@ -140,8 +145,7 @@ export default async function SettingsPage() {
                       {!person.is_active ? <Badge variant="cancelled">Off rotation</Badge> : null}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {person.role === "manager" ? "Manager" : "Tech"} · last turn{" "}
-                      {formatRelative(person.last_turn_at)}
+                      {ROLE_LABEL[person.role]} · last turn {formatRelative(person.last_turn_at)}
                     </p>
                   </div>
 
@@ -155,8 +159,11 @@ export default async function SettingsPage() {
                         value={person.role}
                         aria-label={`Role for ${person.full_name}`}
                       >
-                        <option value="tech">Tech</option>
-                        <option value="manager">Manager</option>
+                        {(Object.keys(ROLE_LABEL) as UserRole[]).map((role) => (
+                          <option key={role} value={role}>
+                            {ROLE_LABEL[role]}
+                          </option>
+                        ))}
                       </ActionSelect>
                     </div>
                   )}

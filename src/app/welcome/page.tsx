@@ -18,7 +18,7 @@ export default async function WelcomePage() {
 
   // Already set up — nothing to do here.
   const session = await getSessionContext();
-  if (session) redirect(session.isManager ? "/dashboard" : "/tech");
+  if (session) redirect(session.canManageFloor ? "/dashboard" : "/tech");
 
   const metadata = (user.user_metadata ?? {}) as { full_name?: string; salon_name?: string };
 

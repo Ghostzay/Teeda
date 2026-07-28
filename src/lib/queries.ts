@@ -7,10 +7,12 @@ import type {
   Customer,
   JobStatus,
   JobWithRelations,
+  PaymentTotals,
   Profile,
 } from "@/lib/types";
 
-const JOB_SELECT = "*, customer:customers(id, name, phone), tech:profiles(id, full_name)";
+const JOB_SELECT =
+  "*, customer:customers(id, name, phone), tech:profiles(id, full_name), payment:payments(*)";
 const APPOINTMENT_SELECT = "*, customer:customers(id, name, phone), tech:profiles(id, full_name)";
 
 /**
@@ -18,6 +20,14 @@ const APPOINTMENT_SELECT = "*, customer:customers(id, name, phone), tech:profile
  * caller's salon (and, for techs, to their own jobs plus the waiting queue),
  * so no query here needs to filter by salon defensively.
  */
+
+/** `payment` comes back as an array from PostgREST; flatten to one or null. */
+function normalizeJobs(rows: unknown[]): JobWithRelations[] {
+  return (rows as (Omit<JobWithRelations, "payment"> & { payment: unknown })[]).map((row) => ({
+    ...row,
+    payment: Array.isArray(row.payment) ? (row.payment[0] ?? null) : (row.payment ?? null),
+  })) as JobWithRelations[];
+}
 
 export async function getJobs(options?: {
   statuses?: JobStatus[];
@@ -38,12 +48,28 @@ export async function getJobs(options?: {
     .limit(options?.limit ?? 200);
 
   if (error) throw new Error(`Failed to load jobs: ${error.message}`);
-  return (data ?? []) as unknown as JobWithRelations[];
+  return normalizeJobs(data ?? []);
 }
 
 /** The live floor: everything not yet finished, oldest check-in first. */
 export async function getActiveJobs(): Promise<JobWithRelations[]> {
   return getJobs({ statuses: ["waiting", "in_progress"] });
+}
+
+/** Most recently finished first — the "just wrapped up" strip. */
+export async function getRecentlyCompleted(limit = 8): Promise<JobWithRelations[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("jobs")
+    .select(JOB_SELECT)
+    .eq("status", "completed")
+    .gte("completed_at", startOfToday())
+    .order("completed_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(`Failed to load finished jobs: ${error.message}`);
+  return normalizeJobs(data ?? []);
 }
 
 export async function getTechCurrentJob(techId: string): Promise<JobWithRelations | null> {
@@ -57,7 +83,7 @@ export async function getTechCurrentJob(techId: string): Promise<JobWithRelation
     .maybeSingle();
 
   if (error) throw new Error(`Failed to load current job: ${error.message}`);
-  return (data as unknown as JobWithRelations) ?? null;
+  return data ? normalizeJobs([data])[0] : null;
 }
 
 export async function getCustomers(search?: string): Promise<Customer[]> {
@@ -119,10 +145,47 @@ export async function getAppointments(range: {
     .select(APPOINTMENT_SELECT)
     .gte("scheduled_at", range.start)
     .lt("scheduled_at", range.end)
-    .order("scheduled_at", { ascending: true });
+    .order("scheduled_at", { ascending: true })
+    .neq("status", "cancelled");
 
   if (error) throw new Error(`Failed to load appointments: ${error.message}`);
   return (data ?? []) as unknown as AppointmentWithRelations[];
+}
+
+/**
+ * A tech's own appointments for today and tomorrow.
+ * RLS already limits techs to `tech_id = auth.uid()`, but the filter is
+ * explicit so managers viewing the same helper get the same shape.
+ */
+export async function getTechAppointments(techId: string): Promise<{
+  today: AppointmentWithRelations[];
+  tomorrow: AppointmentWithRelations[];
+}> {
+  const supabase = await createClient();
+
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const endTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+
+  const { data, error } = await supabase
+    .from("appointments")
+    .select(APPOINTMENT_SELECT)
+    .eq("tech_id", techId)
+    .gte("scheduled_at", startToday.toISOString())
+    .lt("scheduled_at", endTomorrow.toISOString())
+    .neq("status", "cancelled")
+    .order("scheduled_at", { ascending: true });
+
+  if (error) throw new Error(`Failed to load your appointments: ${error.message}`);
+
+  const rows = (data ?? []) as unknown as AppointmentWithRelations[];
+  const boundary = startTomorrow.getTime();
+
+  return {
+    today: rows.filter((row) => Date.parse(row.scheduled_at) < boundary),
+    tomorrow: rows.filter((row) => Date.parse(row.scheduled_at) >= boundary),
+  };
 }
 
 /** Header numbers for the manager dashboard. */
@@ -154,4 +217,31 @@ export async function getTodayStats() {
     completedToday: completed.count ?? 0,
     appointmentsToday: appointments.count ?? 0,
   };
+}
+
+/** Today's till. Front desk only — RLS returns zeros to anyone else. */
+export async function getPaymentTotals(): Promise<PaymentTotals> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("payment_totals_today");
+
+  if (error) throw new Error(`Failed to load takings: ${error.message}`);
+
+  return (
+    data?.[0] ?? {
+      service_total: 0,
+      tip_total: 0,
+      payment_count: 0,
+      cash_total: 0,
+      card_total: 0,
+    }
+  );
+}
+
+/** The one money figure a tech can see: their own tips today. */
+export async function getMyTipsToday(): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("my_tips_today");
+
+  if (error) return 0;
+  return Number(data ?? 0);
 }

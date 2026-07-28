@@ -119,6 +119,22 @@ export async function startJob(jobId: string, techId?: string | null, client?: C
   return data;
 }
 
+/**
+ * Pass on a client you've been offered.
+ *
+ * Declining costs you your place — `last_turn_at` moves to now — and the
+ * client is offered to whoever is next in rotation. That price is the point:
+ * without it, techs could skip past work they don't want and still hold their
+ * spot at the front.
+ */
+export async function skipJob(jobId: string, client?: Client) {
+  const supabase = client ?? (await createClient());
+  const { data, error } = await supabase.rpc("skip_job", { p_job_id: jobId });
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 /** Finish a job, freeing the tech to receive the next turn. */
 export async function completeJob(jobId: string, client?: Client) {
   const supabase = client ?? (await createClient());

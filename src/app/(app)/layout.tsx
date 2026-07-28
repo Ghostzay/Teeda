@@ -6,6 +6,7 @@ import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/lib/actions/auth";
 import { getAuthUser, getSessionContext } from "@/lib/auth";
+import { ROLE_LABEL } from "@/lib/types";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSessionContext();
@@ -17,7 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/welcome");
   }
 
-  const { profile, salon, isManager } = session;
+  const { profile, salon, isManager, canManageFloor, role } = session;
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -32,11 +33,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold leading-tight">{salon.name}</p>
             <p className="truncate text-xs text-muted-foreground">
-              {profile.full_name} · {isManager ? "Manager" : "Tech"}
+              {profile.full_name} · {ROLE_LABEL[role]}
             </p>
           </div>
 
-          <AppNav isManager={isManager} variant="desktop" />
+          <AppNav canManageFloor={canManageFloor} isManager={isManager} variant="desktop" />
 
           <form action={signOut}>
             <Button variant="ghost" size="icon" type="submit" aria-label="Sign out">
@@ -49,7 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* pb leaves room for the mobile tab bar. */}
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-4 sm:pb-8">{children}</main>
 
-      <AppNav isManager={isManager} variant="mobile" />
+      <AppNav canManageFloor={canManageFloor} isManager={isManager} variant="mobile" />
     </div>
   );
 }

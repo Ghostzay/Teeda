@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Footprints } from "lucide-react";
 
 import { JobCard } from "@/components/job-card";
 import { JobForm } from "@/components/job-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { requireSession } from "@/lib/auth";
+import { requireFloorAccess } from "@/lib/auth";
 import { getActiveTechs, getCustomerOptions, getJobs } from "@/lib/queries";
 import { suggestNextTechDetailed } from "@/lib/turn";
 import { cn } from "@/lib/utils";
@@ -21,21 +21,23 @@ const FILTERS = [
   { key: "all", label: "All", statuses: undefined },
 ] as const;
 
+/**
+ * Walk-in check-in — a front-desk screen. Techs never land here; booked
+ * clients are checked in from /appointments instead.
+ */
 export default async function JobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; mine?: string }>;
+  searchParams: Promise<{ filter?: string }>;
 }) {
-  const session = await requireSession();
-  const { filter = "open", mine } = await searchParams;
+  const session = await requireFloorAccess();
+  const { filter = "open" } = await searchParams;
 
   const active = FILTERS.find((option) => option.key === filter) ?? FILTERS[0];
-  const onlyMine = mine === "1" || !session.isManager;
 
   const [jobs, customers, techs, suggestion] = await Promise.all([
     getJobs({
       statuses: active.statuses ? [...active.statuses] : undefined,
-      techId: onlyMine ? session.userId : undefined,
       todayOnly: active.key === "completed" || active.key === "all",
     }),
     getCustomerOptions(),
@@ -46,16 +48,26 @@ export default async function JobsPage({
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-xl font-semibold tracking-tight">Jobs</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Check in a walk-in</h1>
         <p className="text-sm text-muted-foreground">
-          Check in walk-ins and track every service on the floor.
+          For clients with a booking, use{" "}
+          <Link href="/appointments" className="font-medium text-primary underline-offset-4 hover:underline">
+            Appointments
+          </Link>{" "}
+          instead — checking one in there keeps it linked to the booking.
         </p>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[360px_1fr]">
+      <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
         <Card className="lg:sticky lg:top-20 lg:self-start">
           <CardHeader>
-            <CardTitle>New check-in</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Footprints className="size-4 text-primary" />
+              New walk-in
+            </CardTitle>
+            <CardDescription>
+              The rotation picks the tech unless you choose one.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <JobForm
@@ -63,7 +75,6 @@ export default async function JobsPage({
               techs={techs}
               salonId={session.salon.id}
               suggestedTechName={suggestion.tech?.full_name ?? null}
-              isManager={session.isManager}
             />
           </CardContent>
         </Card>
@@ -73,7 +84,7 @@ export default async function JobsPage({
             {FILTERS.map((option) => (
               <Link
                 key={option.key}
-                href={`/jobs?filter=${option.key}${mine === "1" ? "&mine=1" : ""}`}
+                href={`/jobs?filter=${option.key}`}
                 className={cn(
                   "rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
                   option.key === active.key
@@ -84,19 +95,6 @@ export default async function JobsPage({
                 {option.label}
               </Link>
             ))}
-            {session.isManager ? (
-              <Link
-                href={`/jobs?filter=${active.key}${mine === "1" ? "" : "&mine=1"}`}
-                className={cn(
-                  "rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
-                  mine === "1"
-                    ? "border-transparent bg-secondary text-secondary-foreground"
-                    : "border-border bg-card text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Only mine
-              </Link>
-            ) : null}
           </div>
 
           {jobs.length === 0 ? (
@@ -114,7 +112,7 @@ export default async function JobsPage({
                   key={job.id}
                   job={job}
                   techs={techs}
-                  isManager={session.isManager}
+                  canManageFloor
                   currentUserId={session.userId}
                 />
               ))}
