@@ -17,10 +17,11 @@ import type {
   SalonEarningsRow,
   ScheduleEntry,
   ScheduleItem,
-  Service,
   ClientHistoryEntry,
   ClientSummary,
   ServiceLogEntry,
+  ServiceMenuItem,
+  ServiceTechOption,
   TeamSkillRow,
   TechEarnings,
   TechProfile,
@@ -458,18 +459,34 @@ export async function getPaymentTotals(): Promise<PaymentTotals> {
   );
 }
 
-/** The salon's price list. Pass `false` to include retired services. */
-export async function getServices(activeOnly = true): Promise<Service[]> {
+/**
+ * The menu, grouped and with skills resolved.
+ *
+ * Prefer this over `getServices` anywhere the answer matters to staffing:
+ * `services.required_skills` now holds only the *extras* a manager typed, so
+ * reading that column alone says a manicure needs no skills at all.
+ */
+export async function getServiceMenu(includeInactive = false): Promise<ServiceMenuItem[]> {
   const supabase = await createClient();
 
-  let query = supabase.from("services").select("*");
-  if (activeOnly) query = query.eq("is_active", true);
+  const { data, error } = await supabase.rpc("service_menu", {
+    p_include_inactive: includeInactive,
+  });
 
-  const { data, error } = await query
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true });
+  if (error) throw new Error(`Failed to load the menu: ${error.message}`);
+  return (data ?? []).map((row) => ({ ...row, price: Number(row.price) }));
+}
 
-  if (error) throw new Error(`Failed to load services: ${error.message}`);
+/**
+ * Who can do this service, eligible first.
+ *
+ * Both the booking form and the assign control need this, and working it out
+ * in two places is how they come to disagree about who is allowed.
+ */
+export async function getTechsForService(serviceId: string): Promise<ServiceTechOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("techs_for_service", { p_service_id: serviceId });
+  if (error) return [];
   return data ?? [];
 }
 

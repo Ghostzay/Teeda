@@ -20,7 +20,7 @@ import {
   SKILL_LABEL,
   type JobWithRelations,
   type Profile,
-  type Service,
+  type ServiceMenuItem,
 } from "@/lib/types";
 
 /**
@@ -45,7 +45,7 @@ export function JobCard({
   job: JobWithRelations;
   techs: Profile[];
   /** The salon menu, for the checkout cart. Empty for tech-facing cards. */
-  services: Service[];
+  services: ServiceMenuItem[];
   splitPercent: number;
   canManageFloor: boolean;
   currentUserId: string;

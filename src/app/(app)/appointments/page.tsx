@@ -8,7 +8,7 @@ import {
   getAppointments,
   getCustomerOptions,
   getSalonDayBounds,
-  getServices,
+  getServiceMenu,
 } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export default async function AppointmentsPage({
     getAppointments(range),
     getCustomerOptions(),
     getActiveTechs(),
-    getServices(),
+    getServiceMenu(),
   ]);
 
   return (

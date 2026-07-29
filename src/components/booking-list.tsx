@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { formatPhone, formatTime, toDateInputValue } from "@/lib/format";
-import type { AppointmentWithRelations, Customer, Profile, Service } from "@/lib/types";
+import type { AppointmentWithRelations, Customer, Profile, ServiceMenuItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function shiftDays(dateStr: string, delta: number): string {
@@ -120,7 +120,7 @@ export function BookingList({
   appointments: AppointmentWithRelations[];
   customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
-  services: Service[];
+  services: ServiceMenuItem[];
   canManageFloor: boolean;
 }) {
   const router = useRouter();

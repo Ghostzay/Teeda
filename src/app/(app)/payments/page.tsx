@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireFloorAccess } from "@/lib/auth";
 import { formatMoney, formatTime } from "@/lib/format";
-import { getActiveTechs, getPaymentTotals, getRecentlyCompleted, getServices } from "@/lib/queries";
+import { getActiveTechs, getPaymentTotals, getRecentlyCompleted, getServiceMenu } from "@/lib/queries";
 import { PAYMENT_METHOD_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ export default async function PaymentsPage() {
   const [finished, techs, services, totals] = await Promise.all([
     getRecentlyCompleted(50),
     getActiveTechs(),
-    getServices(),
+    getServiceMenu(),
     getPaymentTotals(),
   ]);
 

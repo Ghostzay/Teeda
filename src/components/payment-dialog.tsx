@@ -26,7 +26,7 @@ import {
   type CartLine,
   type JobWithRelations,
   type Profile,
-  type Service,
+  type ServiceMenuItem,
 } from "@/lib/types";
 
 const TIP_PRESETS = [0.15, 0.18, 0.2, 0.25];
@@ -47,7 +47,7 @@ export function PaymentDialog({
 }: {
   job: JobWithRelations;
   techs: Profile[];
-  services: Service[];
+  services: ServiceMenuItem[];
   splitPercent: number;
   variant?: "default" | "outline" | "ghost";
 }) {

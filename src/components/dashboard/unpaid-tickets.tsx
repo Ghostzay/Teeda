@@ -2,7 +2,7 @@ import { CheckCircle2, Receipt } from "lucide-react";
 
 import { PaymentDialog } from "@/components/payment-dialog";
 import { formatTime } from "@/lib/format";
-import type { JobWithRelations, Profile, Service } from "@/lib/types";
+import type { JobWithRelations, Profile, ServiceMenuItem } from "@/lib/types";
 
 /**
  * Finished jobs with no payment recorded, as a working list.
@@ -19,7 +19,7 @@ export function UnpaidTickets({
 }: {
   jobs: JobWithRelations[];
   techs: Profile[];
-  services: Service[];
+  services: ServiceMenuItem[];
   splitPercent: number;
 }) {
   return (

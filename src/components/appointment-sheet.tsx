@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, Pencil, Phone, StickyNote, UserRound, X } from "lucide-react";
 
 import { ActionButton } from "@/components/action-button";
 import { ActionForm } from "@/components/action-form";
+import { ServicePicker } from "@/components/service-picker";
 import { AppointmentStatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +23,8 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { Textarea } from "@/components/ui/textarea";
 import { cancelAppointment, checkInAppointment, updateAppointmentAction } from "@/lib/actions/appointments";
 import { formatDate, formatPhone, formatTime } from "@/lib/format";
-import type { AppointmentWithRelations, Customer, Profile, Service } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
+import type { AppointmentWithRelations, Customer, Profile, ServiceMenuItem } from "@/lib/types";
 
 export type SheetAppointment = {
   id: string;
@@ -87,12 +89,40 @@ export function AppointmentSheet({
   appointment: SheetAppointment | null;
   customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
-  services: Service[];
+  services: ServiceMenuItem[];
   canManageFloor: boolean;
   onClose: () => void;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
+  /** `null` while it is still being read — an empty array is a real answer. */
+  const [basket, setBasket] = useState<string[] | null>(null);
+
+  const appointmentId = appointment?.id ?? null;
+
+  // Read the basket when the editor opens rather than when the sheet does:
+  // most opens are a look, not an edit, and this is a round trip.
+  useEffect(() => {
+    if (!editing || !appointmentId) return;
+
+    let cancelled = false;
+    setBasket(null);
+
+    createClient()
+      .rpc("appointment_basket", { p_appointment_id: appointmentId })
+      .then(({ data }) => {
+        if (cancelled) return;
+        setBasket(
+          (data ?? [])
+            .map((line) => line.service_id)
+            .filter((id): id is string => Boolean(id)),
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editing, appointmentId]);
 
   if (!appointment) return null;
 
@@ -165,15 +195,17 @@ export function AppointmentSheet({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ap_service">Service</Label>
-              <Select id="ap_service" name="service_id" defaultValue={appointment.service_id ?? ""}>
-                <option value="">Keep {appointment.service_name}</option>
-                {services.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name}
-                  </option>
-                ))}
-              </Select>
+              <Label>Services</Label>
+              {/* Seeded from the saved basket, not from `service_id`: a booking
+                  of three services would otherwise reopen showing one, and
+                  saving would silently drop the other two. */}
+              {basket === null ? (
+                <p className="rounded-xl border border-subtle bg-surface-sunken px-3 py-6 text-center text-sm text-muted-text">
+                  Loading what was booked…
+                </p>
+              ) : (
+                <ServicePicker services={services} defaultSelected={basket} />
+              )}
             </div>
 
             <div className="space-y-1.5">

@@ -18,13 +18,15 @@ export async function createAppointment(
   const scheduledTime = String(formData.get("scheduled_time") ?? "");
   const notes = String(formData.get("notes") ?? "").trim();
   const techChoice = String(formData.get("tech_id") ?? "");
-  const serviceId = String(formData.get("service_id") ?? "").trim();
+  const serviceIds = formData.getAll("service_ids").map(String).filter(Boolean);
 
   let customerId = String(formData.get("customer_id") ?? "").trim();
   const newCustomerName = String(formData.get("new_customer_name") ?? "").trim();
   const newCustomerPhone = String(formData.get("new_customer_phone") ?? "").trim();
 
-  if (!serviceName) return { ok: false, error: "Pick or type a service." };
+  if (!serviceName && serviceIds.length === 0) {
+    return { ok: false, error: "Pick or type a service." };
+  }
   if (!scheduledDate || !scheduledTime) return { ok: false, error: "Pick a date and time." };
 
   // `datetime-local` semantics: the entered wall-clock time is the salon's time.
@@ -50,15 +52,17 @@ export async function createAppointment(
     customerId = customer.id;
   }
 
-  const { error } = await supabase.from("appointments").insert({
-    salon_id: session.salon.id,
-    customer_id: customerId,
-    tech_id: techChoice && techChoice !== "any" ? techChoice : null,
-    service_id: serviceId || null,
-    scheduled_at: scheduledAt.toISOString(),
-    service_name: serviceName,
-    notes: notes || null,
-    status: "scheduled",
+  // The booking and its basket go in together — a booking that saved without
+  // its lines shows the right name and quotes the wrong price at checkout. The
+  // RPC also refuses a requested tech who cannot do everything in the basket,
+  // which is a mistake far cheaper to catch now than at check-in.
+  const { error } = await supabase.rpc("book_appointment", {
+    p_customer_id: customerId,
+    p_scheduled_at: scheduledAt.toISOString(),
+    p_service_ids: serviceIds,
+    p_service_name: serviceName || null,
+    p_tech_id: techChoice && techChoice !== "any" ? techChoice : null,
+    p_notes: notes || null,
   });
 
   if (error) return { ok: false, error: error.message };
@@ -134,7 +138,7 @@ export async function updateAppointmentAction(
   const date = String(formData.get("date") ?? "").trim();
   const time = String(formData.get("time") ?? "").trim();
   const techRaw = String(formData.get("tech_id") ?? "");
-  const serviceId = String(formData.get("service_id") ?? "").trim();
+  const serviceIds = formData.getAll("service_ids").map(String).filter(Boolean);
   const customerId = String(formData.get("customer_id") ?? "").trim();
   const notes = String(formData.get("notes") ?? "");
 
@@ -146,11 +150,28 @@ export async function updateAppointmentAction(
   }
 
   const supabase = await createClient();
+
+  // The basket first: `set_appointment_services` rewrites `service_id` and the
+  // one-line label from the lines, so running it after `update_appointment`
+  // would overwrite whatever that just set.
+  //
+  // An empty list means "the desk cleared every line", which the sheet only
+  // sends once it has read the saved basket back — so it is a real intent,
+  // not a form that posted before it finished loading.
+  if (serviceIds.length > 0) {
+    const { error: basketError } = await supabase.rpc("set_appointment_services", {
+      p_appointment_id: id,
+      p_service_ids: serviceIds,
+    });
+    if (basketError) return { ok: false, error: basketError.message };
+  }
+
   const { error } = await supabase.rpc("update_appointment", {
     p_id: id,
     p_scheduled_at: scheduledAt,
     p_tech_id: techRaw && techRaw !== "unassigned" ? techRaw : null,
-    p_service_id: serviceId || null,
+    // The basket owns the service now; passing it again here would fight it.
+    p_service_id: null,
     p_customer_id: customerId || null,
     p_notes: notes,
     p_clear_tech: techRaw === "unassigned",

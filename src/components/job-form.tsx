@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ImagePlus, Loader2, UserPlus, X } from "lucide-react";
 
 import { ActionForm } from "@/components/action-form";
+import { ServicePicker } from "@/components/service-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -12,8 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/toast";
 import { createJob } from "@/lib/actions/jobs";
 import { createClient } from "@/lib/supabase/client";
-import { COMMON_SERVICES, type Customer, type Profile, type Service } from "@/lib/types";
-import { formatMoney } from "@/lib/format";
+import type { Customer, Profile, ServiceMenuItem } from "@/lib/types";
 
 /**
  * Check-in form. Tech defaults to "Next in rotation", so the fair path is the
@@ -29,15 +29,21 @@ export function JobForm({
   customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
   /** The salon menu. Picking from it sets the price and required skills. */
-  services: Service[];
+  services: ServiceMenuItem[];
   salonId: string;
   suggestedTechName: string | null;
 }) {
-  const [serviceName, setServiceName] = useState("");
+  const [picked, setPicked] = useState<ServiceMenuItem[]>([]);
   const [isNewCustomer, setIsNewCustomer] = useState(customers.length === 0);
   const [photoUrl, setPhotoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+  // Bumped on success to remount the picker — it holds its own basket, and a
+  // reset form that still shows the last client's three services is worse than
+  // no reset at all.
+  const [pickerKey, setPickerKey] = useState(0);
   const toast = useToast();
+
+  const needed = [...new Set(picked.flatMap((item) => item.effective_skills))];
 
   async function handlePhoto(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -70,7 +76,8 @@ export function JobForm({
       className="space-y-4"
       onSuccess={() => {
         setPhotoUrl("");
-        setServiceName("");
+        setPicked([]);
+        setPickerKey((value) => value + 1);
         setIsNewCustomer(customers.length === 0);
       }}
     >
@@ -120,50 +127,11 @@ export function JobForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="service_pick">Service</Label>
-        {services.length > 0 ? (
-          <>
-            {/* Picking from the menu carries the price and required skills. */}
-            <Select
-              id="service_pick"
-              name="service_id"
-              defaultValue=""
-              onChange={(event) => {
-                const picked = services.find((item) => item.id === event.target.value);
-                setServiceName(picked ? picked.name : "");
-              }}
-            >
-              <option value="">Off-menu / custom…</option>
-              {services.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name} — {formatMoney(service.price)}
-                </option>
-              ))}
-            </Select>
-            <Input
-              name="service_name"
-              value={serviceName}
-              onChange={(event) => setServiceName(event.target.value)}
-              placeholder="Or type a service"
-              required
-            />
-          </>
-        ) : (
-          <>
-            <Input
-              id="service_pick"
-              name="service_name"
-              list="service-options"
-              placeholder="Gel manicure"
-              required
-            />
-            <datalist id="service-options">
-              {COMMON_SERVICES.map((service) => (
-                <option key={service} value={service} />
-              ))}
-            </datalist>
-          </>
-        )}
+        <Label>Services</Label>
+        {/* Picking from the menu carries the price and the required skills —
+            all of them, so a three-service visit only goes to someone who can
+            do all three. */}
+        <ServicePicker key={pickerKey} services={services} onChange={setPicked} />
       </div>
 
       <div className="space-y-1.5">
@@ -181,11 +149,17 @@ export function JobForm({
             Next in rotation{suggestedTechName ? ` — ${suggestedTechName}` : ""}
           </option>
           <option value="unassigned">Leave open (any tech can claim)</option>
-          {techs.map((tech) => (
-            <option key={tech.id} value={tech.id}>
-              {tech.full_name}
-            </option>
-          ))}
+          {techs.map((tech) => {
+            // Naming a tech who cannot do the work is a check-in that fails at
+            // the desk in front of the client, so say so before they tap it.
+            const short = techs.length > 0 && needed.every((skill) => tech.skills.includes(skill));
+            return (
+              <option key={tech.id} value={tech.id} disabled={!short}>
+                {tech.full_name}
+                {short ? "" : " — doesn't offer everything picked"}
+              </option>
+            );
+          })}
         </Select>
         <p className="text-xs text-muted-foreground">
           Rotation picks the free tech who has waited longest. Override any time.

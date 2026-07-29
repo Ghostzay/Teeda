@@ -9,9 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Textarea } from "@/components/ui/textarea";
+import { ServicePicker } from "@/components/service-picker";
 import { createAppointment } from "@/lib/actions/appointments";
-import { formatMoney } from "@/lib/format";
-import { COMMON_SERVICES, type Customer, type Profile, type Service } from "@/lib/types";
+import type { Customer, Profile, ServiceMenuItem } from "@/lib/types";
 
 export function AppointmentForm({
   customers,
@@ -22,11 +22,15 @@ export function AppointmentForm({
   customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
   /** The salon menu — booking off it carries price and required skills. */
-  services: Service[];
+  services: ServiceMenuItem[];
   defaultDate: string;
 }) {
   const [isNewCustomer, setIsNewCustomer] = useState(customers.length === 0);
-  const [serviceName, setServiceName] = useState("");
+  const [picked, setPicked] = useState<ServiceMenuItem[]>([]);
+  // The picker owns its basket, so a reset needs a remount, not a state poke.
+  const [pickerKey, setPickerKey] = useState(0);
+
+  const needed = [...new Set(picked.flatMap((item) => item.effective_skills))];
 
   return (
     <ActionForm
@@ -34,7 +38,8 @@ export function AppointmentForm({
       className="space-y-4"
       onSuccess={() => {
         setIsNewCustomer(customers.length === 0);
-        setServiceName("");
+        setPicked([]);
+        setPickerKey((value) => value + 1);
       }}
     >
       <div className="space-y-1.5">
@@ -89,61 +94,25 @@ export function AppointmentForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="appt_service">Service</Label>
-        {services.length > 0 ? (
-          <>
-            <Select
-              id="appt_service"
-              name="service_id"
-              defaultValue=""
-              onChange={(event) => {
-                const picked = services.find((item) => item.id === event.target.value);
-                setServiceName(picked ? picked.name : "");
-              }}
-            >
-              <option value="">Off-menu / custom…</option>
-              {services.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name} — {formatMoney(service.price)}
-                  {service.duration_minutes ? ` · ${service.duration_minutes} min` : ""}
-                </option>
-              ))}
-            </Select>
-            <Input
-              name="service_name"
-              value={serviceName}
-              onChange={(event) => setServiceName(event.target.value)}
-              placeholder="Or type a service"
-              required
-            />
-          </>
-        ) : (
-          <>
-            <Input
-              id="appt_service"
-              name="service_name"
-              list="appointment-services"
-              placeholder="Full set acrylic"
-              required
-            />
-            <datalist id="appointment-services">
-              {COMMON_SERVICES.map((service) => (
-                <option key={service} value={service} />
-              ))}
-            </datalist>
-          </>
-        )}
+        <Label>Services</Label>
+        <ServicePicker key={pickerKey} services={services} onChange={setPicked} />
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="appt_tech">Requested tech</Label>
         <Select id="appt_tech" name="tech_id" defaultValue="any">
           <option value="any">No preference — rotation decides at check-in</option>
-          {techs.map((tech) => (
-            <option key={tech.id} value={tech.id}>
-              {tech.full_name}
-            </option>
-          ))}
+          {techs.map((tech) => {
+            // A booking onto someone who can't do the work fails at check-in,
+            // a week later, with the client already in the chair.
+            const qualified = needed.every((skill) => tech.skills.includes(skill));
+            return (
+              <option key={tech.id} value={tech.id} disabled={!qualified}>
+                {tech.full_name}
+                {qualified ? "" : " — doesn't offer everything picked"}
+              </option>
+            );
+          })}
         </Select>
       </div>
 

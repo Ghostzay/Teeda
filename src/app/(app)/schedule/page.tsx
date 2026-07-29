@@ -16,7 +16,7 @@ import {
   getCustomerOptions,
   getMonthAvailability,
   getScheduleOverlay,
-  getServices,
+  getServiceMenu,
   getUnmarkedTechs,
 } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -160,7 +160,7 @@ async function ScheduleContent({
   const [{ items, error }, customers, services] = await Promise.all([
     getScheduleOverlay(from, to, scopeTech),
     session.canManageFloor ? getCustomerOptions() : Promise.resolve([]),
-    session.canManageFloor ? getServices() : Promise.resolve([]),
+    session.canManageFloor ? getServiceMenu() : Promise.resolve([]),
   ]);
 
   const spanDays =

@@ -56,6 +56,12 @@ from (
     (18, '20260728170000_appointments_and_log.sql',
          to_regprocedure('public.service_log(date, uuid)') is not null),
     (19, '20260728180000_profiles_and_history.sql',
-         to_regclass('public.tech_profiles') is not null)
+         to_regclass('public.tech_profiles') is not null),
+    (20, '20260728190000_service_catalogue.sql',
+         exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'services'
+                   and column_name = 'category')),
+    (21, '20260728200000_multi_service.sql',
+         to_regclass('public.appointment_services') is not null)
 ) as t (step, file, applied)
 order by step;

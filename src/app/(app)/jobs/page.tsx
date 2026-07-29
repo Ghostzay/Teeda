@@ -6,7 +6,7 @@ import { JobForm } from "@/components/job-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireFloorAccess } from "@/lib/auth";
-import { getActiveTechs, getCustomerOptions, getJobs, getServices } from "@/lib/queries";
+import { getActiveTechs, getCustomerOptions, getJobs, getServiceMenu } from "@/lib/queries";
 import { suggestNextTechDetailed } from "@/lib/turn";
 import { cn } from "@/lib/utils";
 import type { JobStatus } from "@/lib/types";
@@ -42,7 +42,7 @@ export default async function JobsPage({
     }),
     getCustomerOptions(),
     getActiveTechs(),
-    getServices(),
+    getServiceMenu(),
     suggestNextTechDetailed(session.salon.id),
   ]);
 

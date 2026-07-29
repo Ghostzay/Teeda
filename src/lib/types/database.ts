@@ -427,6 +427,7 @@ export type Database = {
           id: string;
           salon_id: string;
           name: string;
+          category: Database["public"]["Enums"]["service_category"];
           price: number;
           duration_minutes: number | null;
           required_skills: Database["public"]["Enums"]["skill"][];
@@ -439,6 +440,7 @@ export type Database = {
           id?: string;
           salon_id: string;
           name: string;
+          category?: Database["public"]["Enums"]["service_category"];
           price?: number;
           duration_minutes?: number | null;
           required_skills?: Database["public"]["Enums"]["skill"][];
@@ -451,6 +453,7 @@ export type Database = {
           id?: string;
           salon_id?: string;
           name?: string;
+          category?: Database["public"]["Enums"]["service_category"];
           price?: number;
           duration_minutes?: number | null;
           required_skills?: Database["public"]["Enums"]["skill"][];
@@ -465,6 +468,50 @@ export type Database = {
             columns: ["salon_id"];
             isOneToOne: false;
             referencedRelation: "salons";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      appointment_services: {
+        Row: {
+          id: string;
+          salon_id: string;
+          appointment_id: string;
+          service_id: string | null;
+          name: string;
+          price: number;
+          quantity: number;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          salon_id: string;
+          appointment_id: string;
+          service_id?: string | null;
+          name: string;
+          price?: number;
+          quantity?: number;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          salon_id?: string;
+          appointment_id?: string;
+          service_id?: string | null;
+          name?: string;
+          price?: number;
+          quantity?: number;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "appointment_services_appointment_id_fkey";
+            columns: ["appointment_id"];
+            isOneToOne: false;
+            referencedRelation: "appointments";
             referencedColumns: ["id"];
           },
         ];
@@ -1000,6 +1047,75 @@ export type Database = {
         Args: { p_day: string };
         Returns: { starts_at: string; ends_at: string }[];
       };
+      service_menu: {
+        Args: { p_include_inactive?: boolean };
+        Returns: {
+          id: string;
+          name: string;
+          category: Database["public"]["Enums"]["service_category"];
+          price: number;
+          duration_minutes: number | null;
+          /** Only the extras a manager typed — the category's base skill is implied. */
+          required_skills: Database["public"]["Enums"]["skill"][];
+          /** What a tech actually has to hold: base skill ∪ extras. */
+          effective_skills: Database["public"]["Enums"]["skill"][];
+          is_active: boolean;
+          sort_order: number;
+        }[];
+      };
+      techs_for_service: {
+        Args: { p_service_id: string };
+        Returns: { tech_id: string; full_name: string; eligible: boolean }[];
+      };
+      skills_for_services: {
+        Args: { p_service_ids: string[] };
+        Returns: Database["public"]["Enums"]["skill"][];
+      };
+      book_appointment: {
+        Args: {
+          p_customer_id: string;
+          p_scheduled_at: string;
+          p_service_ids: string[];
+          p_service_name: string | null;
+          p_tech_id?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["appointments"]["Row"];
+      };
+      check_in_walkin: {
+        Args: {
+          p_customer_id: string;
+          p_service_ids: string[];
+          p_service_name: string | null;
+          p_type?: Database["public"]["Enums"]["job_type"];
+          p_tech_id?: string | null;
+          p_leave_open?: boolean;
+          p_notes?: string | null;
+          p_photo_url?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["jobs"]["Row"];
+      };
+      appointment_basket: {
+        Args: { p_appointment_id: string };
+        Returns: { service_id: string | null; name: string; price: number; quantity: number }[];
+      };
+      set_appointment_services: {
+        Args: { p_appointment_id: string; p_service_ids: string[] };
+        Returns: undefined;
+      };
+      save_service: {
+        Args: {
+          p_id: string | null;
+          p_name: string;
+          p_category: Database["public"]["Enums"]["service_category"];
+          p_price: number;
+          p_minutes: number | null;
+          p_skills: Database["public"]["Enums"]["skill"][];
+          p_is_active: boolean;
+          p_sort_order?: number | null;
+        };
+        Returns: Database["public"]["Tables"]["services"]["Row"];
+      };
       update_appointment: {
         Args: {
           p_id: string;
@@ -1226,6 +1342,7 @@ export type Database = {
       job_type: "walk-in" | "appointment";
       job_status: "waiting" | "in_progress" | "completed" | "cancelled";
       appointment_status: "scheduled" | "checked_in" | "completed" | "cancelled";
+      service_category: "manicure" | "pedicure" | "enhancement" | "wax" | "addon";
     };
     CompositeTypes: Record<never, never>;
   };

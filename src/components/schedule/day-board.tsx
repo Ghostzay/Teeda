@@ -11,7 +11,7 @@ import type {
   Customer,
   Profile,
   ScheduleItem,
-  Service,
+  ServiceMenuItem,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -59,7 +59,7 @@ export function DayBoard({
   weekDays?: { value: string; label: string; date: Date }[];
   customers: Pick<Customer, "id" | "name" | "phone">[];
   fullTechs: Profile[];
-  services: Service[];
+  services: ServiceMenuItem[];
 }) {
   const [open, setOpen] = useState<SheetAppointment | null>(null);
 

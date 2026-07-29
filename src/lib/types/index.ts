@@ -24,6 +24,7 @@ export type JobStatus = Enums<"job_status">;
 export type AppointmentStatus = Enums<"appointment_status">;
 export type PaymentMethod = Enums<"payment_method">;
 export type Skill = Enums<"skill">;
+export type ServiceCategory = Enums<"service_category">;
 export type BlockKind = Enums<"block_kind">;
 export type ShiftKind = Enums<"shift_kind">;
 export type NotificationType = Enums<"notification_type">;
@@ -67,6 +68,18 @@ export type ClientSummary = FunctionReturns<"client_summary">[number];
 
 /** One row of the team skills grid. */
 export type TeamSkillRow = FunctionReturns<"team_skills">[number];
+
+/** One item on the menu, with its skills already resolved through the category. */
+export type ServiceMenuItem = FunctionReturns<"service_menu">[number];
+
+/** A tech, and whether they hold what a given service needs. */
+export type ServiceTechOption = FunctionReturns<"techs_for_service">[number];
+
+/** One line of what a client booked. A visit can be several services. */
+export type AppointmentService = Tables<"appointment_services">;
+
+/** A booking's basket, as the edit sheet reads it back. */
+export type BasketLine = FunctionReturns<"appointment_basket">[number];
 
 /**
  * ISO weekday numbering, matching Postgres `extract(isodow)`. Monday-first
@@ -214,6 +227,57 @@ export const SKILL_LABEL: Record<Skill, string> = {
 };
 
 export const ALL_SKILLS = Object.keys(SKILL_LABEL) as Skill[];
+
+/**
+ * The menu, grouped. A flat price list stops being usable somewhere around
+ * twenty items, which is roughly where a real salon starts.
+ */
+export const SERVICE_CATEGORY_LABEL: Record<ServiceCategory, string> = {
+  manicure: "Manicures",
+  pedicure: "Pedicures",
+  enhancement: "Enhancements",
+  wax: "Waxing",
+  addon: "Add-ons",
+};
+
+/** Singular, for the one-service-at-a-time places. */
+export const SERVICE_CATEGORY_SINGULAR: Record<ServiceCategory, string> = {
+  manicure: "Manicure",
+  pedicure: "Pedicure",
+  enhancement: "Enhancement",
+  wax: "Wax",
+  addon: "Add-on",
+};
+
+/** Menu order. Tabs read in the order a client would walk through them. */
+export const ALL_SERVICE_CATEGORIES: ServiceCategory[] = [
+  "manicure",
+  "pedicure",
+  "enhancement",
+  "wax",
+  "addon",
+];
+
+/**
+ * The skill a category implies, mirroring `category_base_skills()` in SQL.
+ *
+ * Duplicated deliberately: the database is the authority — it resolves this
+ * again on every save and every job snapshot — but the editor has to *show*
+ * "Manicure (from the category)" before anything is saved, and a round trip
+ * to find that out would make the form feel broken. If these two ever drift,
+ * the database wins and the badge is merely wrong, never the rotation.
+ *
+ * Enhancements and add-ons have no base skill on purpose: acrylic, gel and dip
+ * are genuinely different hands, so a shared base would let the rotation offer
+ * an acrylic full set to someone who only does dip.
+ */
+export const CATEGORY_BASE_SKILLS: Record<ServiceCategory, Skill[]> = {
+  manicure: ["manicure"],
+  pedicure: ["pedicure"],
+  enhancement: [],
+  wax: ["waxing"],
+  addon: [],
+};
 
 /** A line the desk is ringing up, before it's saved. */
 export type CartLine = {
