@@ -5,15 +5,18 @@ import { AlertTriangle, CalendarClock, CalendarDays, Footprints, UserCheck } fro
 import { CalendarNudge } from "@/components/schedule/calendar-nudge";
 import { MonthNavigator } from "@/components/schedule/month-navigator";
 import { UsualWeek } from "@/components/schedule/usual-week";
-import { ScheduleBoard, ScheduleBoardSkeleton } from "@/components/schedule/schedule-board";
+import { DayBoard } from "@/components/schedule/day-board";
+import { ScheduleBoardSkeleton } from "@/components/schedule/schedule-board";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth";
 import { formatDate, toDateInputValue } from "@/lib/format";
 import {
   getActiveTechs,
   getAvailabilityPatterns,
+  getCustomerOptions,
   getMonthAvailability,
   getScheduleOverlay,
+  getServices,
   getUnmarkedTechs,
 } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -154,7 +157,11 @@ async function ScheduleContent({
   const to = new Date(year, month - 1, day + span);
 
   const scopeTech = view === "mine" || !session.canManageFloor ? focusTechId : null;
-  const { items, error } = await getScheduleOverlay(from, to, scopeTech);
+  const [{ items, error }, customers, services] = await Promise.all([
+    getScheduleOverlay(from, to, scopeTech),
+    session.canManageFloor ? getCustomerOptions() : Promise.resolve([]),
+    session.canManageFloor ? getServices() : Promise.resolve([]),
+  ]);
 
   const spanDays =
     view === "mine"
@@ -226,7 +233,7 @@ async function ScheduleContent({
       {error ? (
         <ScheduleError message={error} />
       ) : (
-        <ScheduleBoard
+        <DayBoard
           // "mine" reuses the week board: one tech, columns of days.
           view={view === "mine" ? "week" : "day"}
           date={anchor}
@@ -238,6 +245,9 @@ async function ScheduleContent({
           currentUserId={session.userId}
           canManageFloor={session.canManageFloor}
           weekDays={spanDays}
+          customers={customers}
+          fullTechs={allTechs}
+          services={services}
         />
       )}
 

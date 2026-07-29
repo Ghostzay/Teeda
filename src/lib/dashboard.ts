@@ -39,6 +39,7 @@ export type WidgetId =
   | "turn_rotation"
   | "floor_cards"
   | "unpaid_tickets"
+  | "service_log"
   | "money";
 
 /**
@@ -56,7 +57,8 @@ export type DataKey =
   | "services"
   | "bookings"
   | "unmarked"
-  | "trend";
+  | "trend"
+  | "log";
 
 export type Widget = {
   id: WidgetId;
@@ -158,6 +160,14 @@ export const WIDGETS: Widget[] = [
     defaultHidden: true,
     needs: ["finished", "techs", "services"],
     managerOnly: true,
+  },
+  {
+    id: "service_log",
+    title: "Today's services",
+    description: "Waiting, in service and finished, in one panel.",
+    defaultSlot: "main",
+    defaultOrder: 5,
+    needs: ["log"],
   },
   {
     id: "money",

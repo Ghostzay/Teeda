@@ -52,6 +52,8 @@ from (
     (17, '20260728160000_dashboard_layout.sql',
          exists (select 1 from information_schema.columns
                  where table_schema = 'public' and table_name = 'profiles'
-                   and column_name = 'dashboard_layout'))
+                   and column_name = 'dashboard_layout')),
+    (18, '20260728170000_appointments_and_log.sql',
+         to_regprocedure('public.service_log(date, uuid)') is not null)
 ) as t (step, file, applied)
 order by step;

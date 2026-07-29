@@ -111,3 +111,55 @@ export async function cancelAppointment(
   revalidatePath("/dashboard");
   return { ok: true, message: "Appointment cancelled." };
 }
+
+/**
+ * Change a booking after it has been made.
+ *
+ * Previously there was create and cancel and nothing between, so a mistyped
+ * time meant cancelling and rebooking — which loses the thread for the client
+ * and leaves a cancelled row behind.
+ *
+ * An empty field means "leave it alone" rather than "clear it", except for the
+ * tech, where clearing is a real intent and gets its own flag.
+ */
+export async function updateAppointmentAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireFloorAccess();
+
+  const id = String(formData.get("appointment_id") ?? "");
+  if (!id) return { ok: false, error: "Which booking?" };
+
+  const date = String(formData.get("date") ?? "").trim();
+  const time = String(formData.get("time") ?? "").trim();
+  const techRaw = String(formData.get("tech_id") ?? "");
+  const serviceId = String(formData.get("service_id") ?? "").trim();
+  const customerId = String(formData.get("customer_id") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "");
+
+  let scheduledAt: string | null = null;
+  if (date && time) {
+    const when = new Date(`${date}T${time}`);
+    if (Number.isNaN(when.getTime())) return { ok: false, error: "That date and time don't parse." };
+    scheduledAt = when.toISOString();
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_appointment", {
+    p_id: id,
+    p_scheduled_at: scheduledAt,
+    p_tech_id: techRaw && techRaw !== "unassigned" ? techRaw : null,
+    p_service_id: serviceId || null,
+    p_customer_id: customerId || null,
+    p_notes: notes,
+    p_clear_tech: techRaw === "unassigned",
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/appointments");
+  revalidatePath("/schedule");
+  revalidatePath("/dashboard");
+  return { ok: true, message: "Booking updated." };
+}

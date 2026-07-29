@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Coffee, Wallet } from "lucide-react";
 
 import { CalendarNudge } from "@/components/schedule/calendar-nudge";
+import { ServiceLog } from "@/components/dashboard/service-log";
+import { NotificationsCard } from "@/components/notifications-card";
 import { CheckInCard } from "@/components/checkin-card";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { JobCard } from "@/components/job-card";
@@ -16,6 +18,7 @@ import {
   getNotifications,
   getTechAppointments,
   getTechCurrentJob,
+  getServiceLog,
   getTechEarnings,
   getUnmarkedTechs,
 } from "@/lib/queries";
@@ -45,6 +48,7 @@ export default async function TechPage() {
     earnings,
     notifications,
     unmarked,
+    myDay,
   ] = await Promise.all([
     amICheckedIn(),
     getTechCurrentJob(userId),
@@ -55,6 +59,7 @@ export default async function TechPage() {
     getTechEarnings(userId),
     getNotifications(5),
     getUnmarkedTechs(7),
+    getServiceLog(),
   ]);
 
   const isBusy = Boolean(currentJob);
@@ -86,12 +91,12 @@ export default async function TechPage() {
           </p>
         </div>
         {unread > 0 ? (
-          <Link
-            href="/schedule"
-            className="rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
+          <a
+            href="#alerts"
+            className="flex min-h-11 items-center rounded-full bg-accent-default px-4 text-sm font-semibold text-on-accent"
           >
             {unread} new {unread === 1 ? "alert" : "alerts"}
-          </Link>
+          </a>
         ) : null}
       </header>
 
@@ -101,6 +106,12 @@ export default async function TechPage() {
       <CalendarNudge techs={unmarked} self={{ id: userId }} />
 
       <CheckInCard isCheckedIn={isCheckedIn} />
+
+      {/* The badge above used to link to /schedule, which shows no alerts at
+          all. These are the alerts. */}
+      <div id="alerts">
+        <NotificationsCard notifications={notifications} />
+      </div>
 
       {/* Turn position, then earnings and next booking as one glanceable row. */}
       {isCheckedIn ? (
@@ -238,6 +249,10 @@ export default async function TechPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Their own day, and only their own — service_log enforces that in SQL
+          rather than trusting what this page asks for. */}
+      <ServiceLog entries={myDay} title="My day" personal />
 
       <TurnBoard queue={queue} highlightTechId={userId} />
     </div>

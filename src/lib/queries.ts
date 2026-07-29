@@ -18,6 +18,7 @@ import type {
   ScheduleEntry,
   ScheduleItem,
   Service,
+  ServiceLogEntry,
   TechEarnings,
   TakingsComparison,
   TodayStats,
@@ -302,6 +303,46 @@ export async function getTakingsComparison(): Promise<TakingsComparison> {
   return data[0];
 }
 
+/**
+ * The start and end of a given calendar day, in the salon's timezone.
+ *
+ * `dayRange()` used to build this from `new Date(y, m, d)`, which is midnight
+ * wherever the Node process runs — UTC on Vercel. For a New York salon that
+ * window ran 8pm to 8pm, so a 9pm booking landed on the next day and the
+ * previous evening's bookings appeared in today. One clock, one answer.
+ */
+export async function getSalonDayBounds(day: string): Promise<{ start: string; end: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("salon_day_bounds", { p_day: day });
+
+  if (error || !data?.[0]) {
+    // A page with a slightly wrong window still beats a page that throws.
+    const [y, m, d] = day.split("-").map(Number);
+    return {
+      start: new Date(Date.UTC(y, m - 1, d)).toISOString(),
+      end: new Date(Date.UTC(y, m - 1, d + 1)).toISOString(),
+    };
+  }
+  return { start: data[0].starts_at, end: data[0].ends_at };
+}
+
+/**
+ * Waiting, in service and finished for one day.
+ *
+ * The floor sees everyone; a tech sees only their own, enforced in SQL rather
+ * than by what the caller passes.
+ */
+export async function getServiceLog(day?: string, techId?: string): Promise<ServiceLogEntry[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("service_log", {
+    p_day: day ?? null,
+    p_tech_id: techId ?? null,
+  });
+
+  if (error) return [];
+  return data ?? [];
+}
+
 /** Every tech's usual week, for the pattern editor and the read-back. */
 export async function getAvailabilityPatterns(): Promise<AvailabilityPattern[]> {
   const supabase = await createClient();
@@ -353,19 +394,6 @@ export async function getPaymentTotals(): Promise<PaymentTotals> {
     }
   );
 }
-
-/** The one money figure a tech can see: their own tips today. */
-export async function getMyTipsToday(): Promise<number> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("my_tips_today");
-
-  if (error) return 0;
-  return Number(data ?? 0);
-}
-
-// ---------------------------------------------------------------------------
-// Services, skills, check-ins, earnings and notifications
-// ---------------------------------------------------------------------------
 
 /** The salon's price list. Pass `false` to include retired services. */
 export async function getServices(activeOnly = true): Promise<Service[]> {
@@ -444,27 +472,6 @@ export async function getNotifications(limit = 15): Promise<AppNotification[]> {
 // ---------------------------------------------------------------------------
 // Schedule and commission
 // ---------------------------------------------------------------------------
-
-/**
- * Blocks overlapping a window, tech name attached.
- * Pass `techId` for a single column; omit it for the whole salon.
- */
-export async function getSchedule(
-  from: Date,
-  to: Date,
-  techId?: string | null,
-): Promise<ScheduleEntry[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.rpc("schedule_for_range", {
-    p_from: from.toISOString(),
-    p_to: to.toISOString(),
-    p_tech_id: techId ?? null,
-  });
-
-  if (error) throw new Error(`Failed to load the schedule: ${error.message}`);
-  return data ?? [];
-}
 
 /** Commission rates by tech id. Managers see everyone; a tech sees themselves. */
 export async function getCommissionRates(): Promise<Map<string, number | null>> {

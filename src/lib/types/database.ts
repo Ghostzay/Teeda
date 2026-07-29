@@ -845,6 +845,40 @@ export type Database = {
         Args: { p_id: string };
         Returns: number;
       };
+      salon_day_bounds: {
+        Args: { p_day: string };
+        Returns: { starts_at: string; ends_at: string }[];
+      };
+      update_appointment: {
+        Args: {
+          p_id: string;
+          p_scheduled_at?: string | null;
+          p_tech_id?: string | null;
+          p_service_id?: string | null;
+          p_customer_id?: string | null;
+          p_notes?: string | null;
+          p_clear_tech?: boolean;
+        };
+        Returns: Database["public"]["Tables"]["appointments"]["Row"];
+      };
+      service_log: {
+        Args: { p_day?: string | null; p_tech_id?: string | null };
+        Returns: {
+          id: string;
+          status: string;
+          tech_id: string | null;
+          tech_name: string;
+          customer_name: string;
+          service_name: string;
+          checked_in_at: string;
+          started_at: string | null;
+          completed_at: string | null;
+          is_appointment: boolean;
+          amount: number;
+          tip: number;
+          paid: boolean;
+        }[];
+      };
       set_dashboard_layout: {
         Args: { p_layout: Json | null };
         Returns: Database["public"]["Tables"]["profiles"]["Row"];

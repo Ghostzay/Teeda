@@ -77,6 +77,7 @@ export function ScheduleBoard({
   currentUserId,
   canManageFloor,
   weekDays,
+  onOpenAppointment,
 }: {
   view: "day" | "week";
   date: Date;
@@ -89,6 +90,8 @@ export function ScheduleBoard({
   canManageFloor: boolean;
   /** Week view columns; ignored in day view. */
   weekDays?: { value: string; label: string; date: Date }[];
+  /** Tapping a booking hands its id back so the page can open the sheet. */
+  onOpenAppointment?: (id: string) => void;
 }) {
   const [draft, setDraft] = React.useState<Draft | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -106,13 +109,28 @@ export function ScheduleBoard({
     scrollRef.current?.scrollTo({ top: Math.max(0, offset - 80), behavior: "auto" });
   }, [openHour, closeHour, view]);
 
+  // A booking nobody has been given yet has no tech column to live in, so it
+  // gets one of its own — those are exactly the ones that need attention before
+  // the client walks through the door. Only when there is something in it.
+  const hasUnassigned = items.some((item) => item.tech_id === null);
+
   const columns =
     view === "day"
-      ? techs.map((tech) => ({ key: tech.id, label: tech.full_name, techId: tech.id, date }))
+      ? [
+          ...techs.map((tech) => ({
+            key: tech.id,
+            label: tech.full_name,
+            techId: tech.id as string | null,
+            date,
+          })),
+          ...(hasUnassigned
+            ? [{ key: "unassigned", label: "Unassigned", techId: null, date }]
+            : []),
+        ]
       : (weekDays ?? []).map((day) => ({
           key: day.value,
           label: day.label,
-          techId: techs[0]?.id ?? currentUserId,
+          techId: (techs[0]?.id ?? currentUserId) as string | null,
           date: day.date,
         }));
 
@@ -132,6 +150,12 @@ export function ScheduleBoard({
   };
 
   const openItem = (item: ScheduleItem) => {
+    // A booking is editable in place now that update_appointment exists.
+    if (item.layer === "appointment" && canManageFloor) {
+      onOpenAppointment?.(item.id);
+      return;
+    }
+
     if (item.layer !== "shift" || !item.editable) {
       setDraft({
         id: item.id,
@@ -166,7 +190,7 @@ export function ScheduleBoard({
           <div ref={scrollRef} className="panel-scroll max-h-[62vh] overflow-x-auto">
             <div className="w-full min-w-max">
               {/* Column headers stay visible while the grid scrolls. */}
-              <div className="sticky top-0 z-30 flex border-b border-border bg-surface-2">
+              <div className="sticky top-0 z-30 flex border-b border-border bg-surface-sunken">
                 <div className="w-16 shrink-0 border-r border-border" />
                 {columns.map((column) => (
                   <div
@@ -213,20 +237,34 @@ export function ScheduleBoard({
                       key={column.key}
                       className="relative min-w-[9.5rem] flex-1 border-r border-border last:border-r-0"
                     >
-                      {/* Tap targets: one per 15 minutes, each a full 44px row. */}
-                      {Array.from({ length: slotCount }, (_, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => openCreate(column.techId, column.date, index)}
-                          aria-label={`Add a shift at ${slotLabel(openHour, index)}`}
-                          className={cn(
-                            "absolute inset-x-0 border-t transition-colors hover:bg-primary/10",
-                            index % 4 === 0 ? "border-border" : "border-border/35",
-                          )}
-                          style={{ top: index * SLOT_PX, height: SLOT_PX }}
-                        />
-                      ))}
+                      {/* Tap targets: one per 15 minutes, each a full 44px row.
+                          The Unassigned column has no tech to give hours to, so
+                          its slots are dividers rather than buttons. */}
+                      {Array.from({ length: slotCount }, (_, index) =>
+                        column.techId === null ? (
+                          <div
+                            key={index}
+                            aria-hidden
+                            className={cn(
+                              "absolute inset-x-0 border-t",
+                              index % 4 === 0 ? "border-border" : "border-border/35",
+                            )}
+                            style={{ top: index * SLOT_PX, height: SLOT_PX }}
+                          />
+                        ) : (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => openCreate(column.techId as string, column.date, index)}
+                            aria-label={`Add a shift at ${slotLabel(openHour, index)}`}
+                            className={cn(
+                              "absolute inset-x-0 border-t transition-colors hover:bg-primary/10",
+                              index % 4 === 0 ? "border-border" : "border-border/35",
+                            )}
+                            style={{ top: index * SLOT_PX, height: SLOT_PX }}
+                          />
+                        ),
+                      )}
 
                       {shifts.map((item) => {
                         const style = LAYER_STYLE.shift;
@@ -396,15 +434,16 @@ function SlotDialog({
           <>
             <DialogHeader>
               <DialogTitle>
-                {readOnly.layer === "appointment" ? "Appointment" : "Walk-in"}
+                {readOnly.layer === "appointment" ? "Booking" : "Walk-in"}
               </DialogTitle>
               <DialogDescription>
-                Read-only here — change it from{" "}
-                {readOnly.layer === "appointment" ? "Appointments" : "Jobs & check-ins"}.
+                {readOnly.layer === "appointment"
+                  ? "Ask the front desk to change a booking."
+                  : "A walk-in already on the floor. Manage it from the Dashboard."}
               </DialogDescription>
             </DialogHeader>
 
-            <dl className="space-y-2 rounded-lg bg-surface-2 p-4 text-sm">
+            <dl className="space-y-2 rounded-lg bg-surface-sunken p-4 text-sm">
               <Row label="Who" value={readOnly.title ?? "—"} />
               <Row label="Tech" value={readOnly.tech_name} />
               <Row
@@ -557,11 +596,11 @@ export function ScheduleBoardSkeleton() {
       role="status"
       aria-label="Loading the schedule"
     >
-      <div className="flex border-b border-border bg-surface-2">
+      <div className="flex border-b border-border bg-surface-sunken">
         <div className="w-16 shrink-0 border-r border-border" />
         {Array.from({ length: 3 }, (_, i) => (
           <div key={i} className="min-w-[9.5rem] flex-1 border-r border-border px-2 py-3 last:border-r-0">
-            <div className="mx-auto h-4 w-20 animate-pulse rounded bg-surface-3" />
+            <div className="mx-auto h-4 w-20 animate-pulse rounded bg-surface-overlay" />
           </div>
         ))}
       </div>
@@ -572,7 +611,7 @@ export function ScheduleBoardSkeleton() {
             {[110, 70, 150].map((h, i) => (
               <div
                 key={i}
-                className="animate-pulse rounded-lg bg-surface-3"
+                className="animate-pulse rounded-lg bg-surface-overlay"
                 style={{ height: h, animationDelay: `${(column * 3 + i) * 60}ms` }}
               />
             ))}

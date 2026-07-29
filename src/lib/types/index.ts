@@ -55,6 +55,9 @@ export type UnmarkedTech = FunctionReturns<"unmarked_techs">[number];
 /** Today's takings against the same weekday last week. */
 export type TakingsComparison = FunctionReturns<"takings_comparison">[number];
 
+/** One line in the service log: a job with its status, tech and money. */
+export type ServiceLogEntry = FunctionReturns<"service_log">[number];
+
 /**
  * ISO weekday numbering, matching Postgres `extract(isodow)`. Monday-first
  * because that is how a rota is read, and because the month grid is too.

@@ -4,6 +4,7 @@ import { ArrowRight, Plus, Receipt, Scissors } from "lucide-react";
 import { AssignControls, type FreeTech } from "@/components/dashboard/assign-controls";
 import { DashboardCanvas } from "@/components/dashboard/dashboard-canvas";
 import { NeedsAttention, type AttentionInput } from "@/components/dashboard/needs-attention";
+import { ServiceLog } from "@/components/dashboard/service-log";
 import { TakingsTrend } from "@/components/dashboard/takings-trend";
 import { TechRail } from "@/components/dashboard/tech-rail";
 import { UnpaidTickets } from "@/components/dashboard/unpaid-tickets";
@@ -25,6 +26,8 @@ import {
   getFloorStatus,
   getPaymentTotals,
   getRecentlyCompleted,
+  getSalonDayBounds,
+  getServiceLog,
   getServices,
   getTakingsComparison,
   getTodayStats,
@@ -54,15 +57,31 @@ export default async function DashboardPage() {
   );
   const needs = requiredData(layout);
 
-  const dayStart = new Date();
-  dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(dayStart);
-  dayEnd.setDate(dayEnd.getDate() + 1);
+  // The salon's day, not the server's — see getSalonDayBounds. Building this
+  // from `new Date()` here is exactly how evening bookings went missing.
+  const today = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dayKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  const bookingWindow = needs.has("bookings")
+    ? await getSalonDayBounds(dayKey)
+    : { start: "", end: "" };
 
   // The header always shows the counts, so `stats` is unconditional. Everything
   // else is gated on some visible widget actually asking for it.
-  const [stats, jobs, queue, floor, finished, totals, techs, services, bookings, unmarked, trend] =
-    await Promise.all([
+  const [
+    stats,
+    jobs,
+    queue,
+    floor,
+    finished,
+    totals,
+    techs,
+    services,
+    bookings,
+    unmarked,
+    trend,
+    log,
+  ] = await Promise.all([
       getTodayStats(),
       needs.has("jobs") ? getActiveJobs() : Promise.resolve([]),
       needs.has("queue") ? getTurnQueue(session.salon.id) : Promise.resolve([]),
@@ -71,11 +90,10 @@ export default async function DashboardPage() {
       needs.has("totals") ? getPaymentTotals() : Promise.resolve(null),
       needs.has("techs") ? getActiveTechs() : Promise.resolve([]),
       needs.has("services") ? getServices() : Promise.resolve([]),
-      needs.has("bookings")
-        ? getAppointments({ start: dayStart.toISOString(), end: dayEnd.toISOString() })
-        : Promise.resolve([]),
+      needs.has("bookings") ? getAppointments(bookingWindow) : Promise.resolve([]),
       needs.has("unmarked") ? getUnmarkedTechs(7) : Promise.resolve([]),
       needs.has("trend") ? getTakingsComparison() : Promise.resolve(null),
+      needs.has("log") ? getServiceLog() : Promise.resolve([]),
     ]);
 
   // `getActiveJobs` already orders by check-in, so the first is the longest wait.
@@ -116,7 +134,7 @@ export default async function DashboardPage() {
       .map((tech) => ({ id: tech.tech_id, name: tech.full_name, from: tech.shift_start })),
   };
 
-  const today = new Date().toLocaleDateString("en-US", {
+  const todayLabel = today.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -268,6 +286,10 @@ export default async function DashboardPage() {
     );
   }
 
+  if (visible.has("service_log")) {
+    nodes.service_log = <ServiceLog entries={log} />;
+  }
+
   if (visible.has("money") && totals) {
     const collected = Number(totals.service_total) + Number(totals.tip_total);
     nodes.money = (
@@ -333,7 +355,7 @@ export default async function DashboardPage() {
         <div className="min-w-0">
           <h1 className="text-display">Dashboard</h1>
           <p className="mt-1 text-sm text-secondary-text">
-            {today} ·{" "}
+            {todayLabel} ·{" "}
             <span className="font-semibold text-primary-text tabular-nums">{stats.checked_in}</span>{" "}
             on rotation ·{" "}
             <span className="font-semibold text-primary-text tabular-nums">{stats.waiting}</span>{" "}

@@ -21,8 +21,8 @@ Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 + shadcn/ui · Supabase
 | Service menu & pricing | `src/components/service-manager.tsx`, `/settings` |
 | Skills & daily check-in | `src/lib/actions/rotation.ts`, `src/components/checkin-card.tsx` |
 | Earnings dashboards | `src/components/earnings.tsx` |
-| In-app notifications | `src/components/notifications-card.tsx` |
-| Hourly schedule (day + week) | `src/components/schedule-grid.tsx`, `/schedule` |
+| In-app notifications | `src/components/notifications-card.tsx`, `/tech` |
+| Staff hours (month / day / personal) | `src/components/schedule/`, `/schedule` |
 | Per-tech commission rates | `src/lib/actions/commission.ts`, `/staff` |
 
 ## Roles
