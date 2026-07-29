@@ -11,6 +11,52 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      tech_profiles: {
+        Row: {
+          tech_id: string;
+          salon_id: string;
+          phone: string | null;
+          email: string | null;
+          started_on: string | null;
+          pronouns: string | null;
+          bio: string | null;
+          specialties: string | null;
+          certifications: string | null;
+          emergency_contact: string | null;
+          emergency_phone: string | null;
+          manager_notes: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          tech_id: string;
+          salon_id?: string;
+          phone?: string | null;
+          email?: string | null;
+          started_on?: string | null;
+          pronouns?: string | null;
+          bio?: string | null;
+          specialties?: string | null;
+          certifications?: string | null;
+          emergency_contact?: string | null;
+          emergency_phone?: string | null;
+          manager_notes?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          phone?: string | null;
+          email?: string | null;
+          started_on?: string | null;
+          pronouns?: string | null;
+          bio?: string | null;
+          specialties?: string | null;
+          certifications?: string | null;
+          emergency_contact?: string | null;
+          emergency_phone?: string | null;
+          manager_notes?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       salons: {
         Row: {
           id: string;
@@ -111,6 +157,11 @@ export type Database = {
           phone: string | null;
           notes: string | null;
           created_at: string;
+          email: string | null;
+          birthday: string | null;
+          preferred_tech_id: string | null;
+          allergies: string | null;
+          is_active: boolean;
         };
         Insert: {
           id?: string;
@@ -119,6 +170,11 @@ export type Database = {
           phone?: string | null;
           notes?: string | null;
           created_at?: string;
+          email?: string | null;
+          birthday?: string | null;
+          preferred_tech_id?: string | null;
+          allergies?: string | null;
+          is_active?: boolean;
         };
         Update: {
           id?: string;
@@ -127,6 +183,11 @@ export type Database = {
           phone?: string | null;
           notes?: string | null;
           created_at?: string;
+          email?: string | null;
+          birthday?: string | null;
+          preferred_tech_id?: string | null;
+          allergies?: string | null;
+          is_active?: boolean;
         };
         Relationships: [
           {
@@ -844,6 +905,96 @@ export type Database = {
       delete_shift: {
         Args: { p_id: string };
         Returns: number;
+      };
+      delete_tech: {
+        Args: { p_tech_id: string };
+        Returns: string;
+      };
+      tech_deletion_check: {
+        Args: { p_tech_id: string };
+        Returns: {
+          can_delete: boolean;
+          completed_jobs: number;
+          payments_count: number;
+          future_bookings: number;
+          reason: string;
+        }[];
+      };
+      bulk_update_skills: {
+        Args: {
+          p_tech_ids?: string[] | null;
+          p_add?: Database["public"]["Enums"]["skill"][];
+          p_remove?: Database["public"]["Enums"]["skill"][];
+        };
+        Returns: number;
+      };
+      save_tech_profile: {
+        Args: {
+          p_tech_id: string;
+          p_phone: string | null;
+          p_email: string | null;
+          p_started_on: string | null;
+          p_pronouns: string | null;
+          p_bio: string | null;
+          p_specialties: string | null;
+          p_certifications: string | null;
+          p_emergency_contact: string | null;
+          p_emergency_phone: string | null;
+          p_manager_notes: string | null;
+        };
+        Returns: Database["public"]["Tables"]["tech_profiles"]["Row"];
+      };
+      update_customer_details: {
+        Args: {
+          p_id: string;
+          p_email?: string | null;
+          p_birthday?: string | null;
+          p_preferred_tech_id?: string | null;
+          p_allergies?: string | null;
+          p_clear_preferred?: boolean;
+        };
+        Returns: Database["public"]["Tables"]["customers"]["Row"];
+      };
+      client_history: {
+        Args: { p_customer_id: string };
+        Returns: {
+          kind: string;
+          id: string;
+          at: string;
+          service_name: string;
+          tech_id: string | null;
+          tech_name: string;
+          status: string;
+          notes: string | null;
+          amount: number;
+          tip: number;
+          paid: boolean;
+          is_future: boolean;
+        }[];
+      };
+      client_summary: {
+        Args: { p_customer_id: string };
+        Returns: {
+          visits: number;
+          lifetime_spend: number;
+          lifetime_tips: number;
+          first_visit: string | null;
+          last_visit: string | null;
+          upcoming: number;
+          favourite_tech: string | null;
+          favourite_service: string | null;
+        }[];
+      };
+      team_skills: {
+        Args: Record<string, never>;
+        Returns: {
+          tech_id: string;
+          full_name: string;
+          is_active: boolean;
+          skills: Database["public"]["Enums"]["skill"][];
+          specialties: string | null;
+          jobs_30d: number;
+        }[];
       };
       salon_day_bounds: {
         Args: { p_day: string };

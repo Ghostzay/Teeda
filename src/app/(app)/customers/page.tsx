@@ -1,4 +1,5 @@
-import { Phone, Search, Users } from "lucide-react";
+import Link from "next/link";
+import { Phone, Search, ShieldAlert, Users } from "lucide-react";
 
 import { ActionButton } from "@/components/action-button";
 import { CustomerDialog } from "@/components/customer-dialog";
@@ -25,7 +26,7 @@ export default async function CustomersPage({
     <div className="space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Clients</h1>
+          <h1 className="text-display">Clients</h1>
           <p className="text-sm text-muted-foreground">
             {customers.length} {customers.length === 1 ? "client" : "clients"}
             {q ? ` matching “${q}”` : ""}
@@ -64,7 +65,20 @@ export default async function CustomersPage({
               <CardContent className="space-y-2 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate font-medium">{customer.name}</p>
+                    {/* The name is the way in to their profile — history,
+                        allergies, who they ask for. */}
+                    <Link
+                      href={`/customers/${customer.id}`}
+                      className="block truncate font-semibold underline-offset-4 hover:underline"
+                    >
+                      {customer.name}
+                    </Link>
+                    {customer.allergies ? (
+                      <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-danger-bg px-2 py-0.5 text-meta font-semibold text-danger">
+                        <ShieldAlert className="size-3" />
+                        Allergies
+                      </span>
+                    ) : null}
                     {customer.phone ? (
                       <a
                         href={`tel:${customer.phone}`}

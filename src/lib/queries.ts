@@ -18,8 +18,12 @@ import type {
   ScheduleEntry,
   ScheduleItem,
   Service,
+  ClientHistoryEntry,
+  ClientSummary,
   ServiceLogEntry,
+  TeamSkillRow,
   TechEarnings,
+  TechProfile,
   TakingsComparison,
   TodayStats,
   TurnCheckin,
@@ -339,6 +343,65 @@ export async function getServiceLog(day?: string, techId?: string): Promise<Serv
     p_tech_id: techId ?? null,
   });
 
+  if (error) return [];
+  return data ?? [];
+}
+
+export async function getCustomer(id: string): Promise<Customer | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("customers").select("*").eq("id", id).maybeSingle();
+  return data ?? null;
+}
+
+/** A client's past visits and future bookings, newest first. */
+export async function getClientHistory(id: string): Promise<ClientHistoryEntry[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("client_history", { p_customer_id: id });
+  if (error) return [];
+  return data ?? [];
+}
+
+export async function getClientSummary(id: string): Promise<ClientSummary | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("client_summary", { p_customer_id: id });
+  if (error) return null;
+  return data?.[0] ?? null;
+}
+
+/**
+ * A tech's extended profile.
+ *
+ * RLS returns nothing to anyone but the tech themselves and a manager, so a
+ * null here is an answer rather than an error — admins get null by design,
+ * because next of kin is not something running the floor requires.
+ */
+export async function getTechProfile(techId: string): Promise<TechProfile | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tech_profiles")
+    .select("*")
+    .eq("tech_id", techId)
+    .maybeSingle();
+  return data ?? null;
+}
+
+/**
+ * Whether a team member can be deleted outright, and why not if they cannot.
+ *
+ * Asked before the manager commits to anything, so the confirmation can say
+ * "they have 40 payments on record" rather than failing after the fact.
+ */
+export async function getTechDeletionCheck(techId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("tech_deletion_check", { p_tech_id: techId });
+  if (error) return null;
+  return data?.[0] ?? null;
+}
+
+/** The whole team's skills as one grid, for the Skills tab. */
+export async function getTeamSkills(): Promise<TeamSkillRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("team_skills");
   if (error) return [];
   return data ?? [];
 }

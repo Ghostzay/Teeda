@@ -8,6 +8,7 @@ import {
   Receipt,
   Scissors,
   Settings,
+  Contact,
   TrendingUp,
   UserCog,
   Users,
@@ -60,6 +61,7 @@ const MANAGER_NAV: NavGroup[] = [
       { href: "/dashboard", label: "Dashboard", short: "Today", icon: LayoutDashboard },
       { href: "/appointments", label: "Bookings", short: "Booked", icon: CalendarDays },
       { href: "/schedule", label: "Staff hours", short: "Hours", icon: CalendarClock },
+      { href: "/customers", label: "Clients", short: "Clients", icon: Contact },
     ],
   },
   {

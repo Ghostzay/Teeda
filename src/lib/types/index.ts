@@ -16,6 +16,7 @@ export type Service = Tables<"services">;
 export type JobService = Tables<"job_services">;
 export type TurnCheckin = Tables<"turn_checkins">;
 export type AppNotification = Tables<"notifications">;
+export type TechProfile = Tables<"tech_profiles">;
 
 export type UserRole = Enums<"user_role">;
 export type JobType = Enums<"job_type">;
@@ -57,6 +58,15 @@ export type TakingsComparison = FunctionReturns<"takings_comparison">[number];
 
 /** One line in the service log: a job with its status, tech and money. */
 export type ServiceLogEntry = FunctionReturns<"service_log">[number];
+
+/** One past visit or future booking on a client's profile. */
+export type ClientHistoryEntry = FunctionReturns<"client_history">[number];
+
+/** The headline numbers on a client's profile. */
+export type ClientSummary = FunctionReturns<"client_summary">[number];
+
+/** One row of the team skills grid. */
+export type TeamSkillRow = FunctionReturns<"team_skills">[number];
 
 /**
  * ISO weekday numbering, matching Postgres `extract(isodow)`. Monday-first

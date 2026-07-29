@@ -5,7 +5,8 @@ import { ActionButton, ActionSelect } from "@/components/action-button";
 import { ActionForm } from "@/components/action-form";
 import { CommissionEditor } from "@/components/commission-editor";
 import { TechRail } from "@/components/dashboard/tech-rail";
-import { SkillsEditor } from "@/components/skills-editor";
+import { SkillsGrid } from "@/components/team/skills-grid";
+import { TechProfileDialog } from "@/components/team/tech-profile-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,21 +22,51 @@ import {
 } from "@/lib/actions/salon";
 import { requireManager } from "@/lib/auth";
 import { formatDate, formatMoney, formatRelative } from "@/lib/format";
-import { getCommissionRates, getFloorStatus, getStaff, getTodayCheckins } from "@/lib/queries";
+import {
+  getCommissionRates,
+  getFloorStatus,
+  getStaff,
+  getTeamSkills,
+  getTechDeletionCheck,
+  getTechProfile,
+  getTodayCheckins,
+} from "@/lib/queries";
 import { ROLE_DESCRIPTION, ROLE_LABEL, SKILL_LABEL, type UserRole } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 /** Staff & techs — the roster, their roles, skills and today's check-in state. */
-export default async function StaffPage() {
+export default async function StaffPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const session = await requireManager();
-  const [staff, checkins, rates, floor] = await Promise.all([
+  const { tab } = await searchParams;
+  const view: "roster" | "skills" = tab === "skills" ? "skills" : "roster";
+  const [staff, checkins, rates, floor, teamSkills] = await Promise.all([
     getStaff(),
     getTodayCheckins(),
     getCommissionRates(),
     getFloorStatus(),
+    view === "skills" ? getTeamSkills() : Promise.resolve([]),
   ]);
+
+  // The roster shows a Profile button per person; both the extended profile and
+  // the "can this one be deleted?" answer are needed to render it honestly.
   const techs = staff.filter((person) => person.role === "tech");
+  const extras =
+    view === "roster"
+      ? await Promise.all(
+          techs.map(async (person) => ({
+            id: person.id,
+            profile: await getTechProfile(person.id),
+            deletion: await getTechDeletionCheck(person.id),
+          })),
+        )
+      : [];
+  const extraById = new Map(extras.map((entry) => [entry.id, entry]));
   const houseRate = session.salon.tech_split_percent;
 
   // Pay periods are a length plus an anchor, so "current period" is arithmetic.
@@ -79,6 +110,41 @@ export default async function StaffPage() {
         <TechRail techs={floor} />
       </section>
 
+      {/* Two questions, two tabs: who is on the team, and who can do what. */}
+      <nav className="flex gap-1 rounded-xl bg-surface-sunken p-1" aria-label="Team views">
+        {(
+          [
+            { id: "roster", label: "Roster" },
+            { id: "skills", label: "Skills" },
+          ] as const
+        ).map((entry) => (
+          <Link
+            key={entry.id}
+            href={entry.id === "roster" ? "/staff" : `/staff?tab=${entry.id}`}
+            aria-current={view === entry.id ? "page" : undefined}
+            className={cn(
+              "flex min-h-11 flex-1 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-colors",
+              view === entry.id
+                ? "bg-surface-overlay text-primary-text"
+                : "text-muted-text hover:text-primary-text",
+            )}
+          >
+            {entry.label}
+          </Link>
+        ))}
+      </nav>
+
+      {view === "skills" ? (
+        <section aria-label="Team skills" className="space-y-3">
+          <p className="text-sm text-secondary-text">
+            The rotation never offers work a tech has no skill for, so this list decides who gets
+            which clients. Tap a cell to change one person, or select rows to change several.
+          </p>
+          <SkillsGrid rows={teamSkills} />
+        </section>
+      ) : (
+        <>
+
       <Card className="edge-accent">
         <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
           <div>
@@ -115,7 +181,9 @@ export default async function StaffPage() {
             Team
           </CardTitle>
           <CardDescription>
-            Deactivate to take someone off the rotation without deleting anything.
+            Deactivate takes someone off the rotation and keeps their history. Deleting is only
+            possible for someone with no completed services or payments — otherwise it would
+            detach the money they took from the books.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -182,6 +250,13 @@ export default async function StaffPage() {
                   )}
 
                   <div className="flex shrink-0 flex-wrap gap-2">
+                    {person.role === "tech" ? (
+                      <TechProfileDialog
+                        tech={person}
+                        profile={extraById.get(person.id)?.profile ?? null}
+                        deletion={extraById.get(person.id)?.deletion ?? null}
+                      />
+                    ) : null}
                     {person.role === "tech" && person.is_active ? (
                       <>
                         <ActionButton
@@ -270,22 +345,8 @@ export default async function StaffPage() {
         </CardContent>
       </Card>
 
-      {techs.length > 0 ? (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold tracking-tight">Technician skills</h2>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {techs.map((tech) => (
-              <SkillsEditor
-                key={tech.id}
-                techId={tech.id}
-                skills={tech.skills}
-                title={tech.full_name}
-                description="Services the rotation may offer them."
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
+        </>
+      )}
     </div>
   );
 }

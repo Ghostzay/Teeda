@@ -54,6 +54,8 @@ from (
                  where table_schema = 'public' and table_name = 'profiles'
                    and column_name = 'dashboard_layout')),
     (18, '20260728170000_appointments_and_log.sql',
-         to_regprocedure('public.service_log(date, uuid)') is not null)
+         to_regprocedure('public.service_log(date, uuid)') is not null),
+    (19, '20260728180000_profiles_and_history.sql',
+         to_regclass('public.tech_profiles') is not null)
 ) as t (step, file, applied)
 order by step;
