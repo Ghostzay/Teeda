@@ -18,12 +18,17 @@ export function AppointmentForm({
   techs,
   services,
   defaultDate,
+  defaultTime,
+  defaultTechId,
 }: {
   customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
   /** The salon menu — booking off it carries price and required skills. */
   services: ServiceMenuItem[];
   defaultDate: string;
+  /** Set when the desk tapped open time on the day calendar. */
+  defaultTime?: string;
+  defaultTechId?: string;
 }) {
   const [isNewCustomer, setIsNewCustomer] = useState(customers.length === 0);
   const [picked, setPicked] = useState<ServiceMenuItem[]>([]);
@@ -89,7 +94,7 @@ export function AppointmentForm({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="scheduled_time">Time</Label>
-          <Input id="scheduled_time" name="scheduled_time" type="time" defaultValue="10:00" required />
+          <Input id="scheduled_time" name="scheduled_time" type="time" defaultValue={defaultTime ?? "10:00"} required />
         </div>
       </div>
 
@@ -100,7 +105,7 @@ export function AppointmentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="appt_tech">Requested tech</Label>
-        <Select id="appt_tech" name="tech_id" defaultValue="any">
+        <Select id="appt_tech" name="tech_id" defaultValue={defaultTechId ?? "any"}>
           <option value="any">No preference — rotation decides at check-in</option>
           {techs.map((tech) => {
             // A booking onto someone who can't do the work fails at check-in,

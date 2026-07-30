@@ -1,12 +1,11 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { AlertTriangle, CalendarClock, CalendarDays, Footprints, UserCheck } from "lucide-react";
+import { AlertTriangle, CalendarClock, CalendarDays } from "lucide-react";
 
 import { CalendarNudge } from "@/components/schedule/calendar-nudge";
+import { DayCalendar, DayCalendarSkeleton, DayHeader } from "@/components/schedule/day-calendar";
 import { MonthNavigator } from "@/components/schedule/month-navigator";
 import { UsualWeek } from "@/components/schedule/usual-week";
-import { DayBoard } from "@/components/schedule/day-board";
-import { ScheduleBoardSkeleton } from "@/components/schedule/schedule-board";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth";
 import { formatDate, toDateInputValue } from "@/lib/format";
@@ -14,8 +13,8 @@ import {
   getActiveTechs,
   getAvailabilityPatterns,
   getCustomerOptions,
+  getDayCalendar,
   getMonthAvailability,
-  getScheduleOverlay,
   getServiceMenu,
   getUnmarkedTechs,
 } from "@/lib/queries";
@@ -23,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-type View = "month" | "day" | "mine";
+type View = "month" | "day";
 
 /**
  * Staff hours.
@@ -61,12 +60,13 @@ async function ScheduleContent({
 
   const requested = params.view;
   const view: View =
-    requested === "day" || requested === "mine" || requested === "month"
+    requested === "day" || requested === "month"
       ? requested
-      : // A manager opens on the month; a tech opens on their own days.
+      : // A manager opens on the month to see the shape of the week; a tech
+        // opens on the day, because their own next client is the question.
         session.canManageFloor
         ? "month"
-        : "mine";
+        : "day";
 
   const dateStr =
     params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : toDateInputValue();
@@ -83,9 +83,6 @@ async function ScheduleContent({
       ? params.tech
       : (techs[0]?.id ?? session.userId)
     : session.userId;
-
-  const openHour = session.salon.open_hour ?? 9;
-  const closeHour = session.salon.close_hour ?? 20;
 
   const linkTo = (next: Record<string, string>) => {
     const query = new URLSearchParams({
@@ -151,117 +148,63 @@ async function ScheduleContent({
     );
   }
 
-  // ---- Day (every tech) and Mine (one tech, three days) --------------------
-  const span = view === "mine" ? 3 : 1;
-  const from = new Date(year, month - 1, day);
-  const to = new Date(year, month - 1, day + span);
+  // ---- Day: one day, a column per working tech -----------------------------
+  //
+  // The floor view. Everything it needs comes back in one call with every time
+  // already resolved to salon-local minutes, so nothing below parses a date.
+  if (view === "day") {
+    const [{ data, error }, customers, services] = await Promise.all([
+      getDayCalendar(dateStr, session.canManageFloor ? null : session.userId),
+      session.canManageFloor ? getCustomerOptions() : Promise.resolve([]),
+      session.canManageFloor ? getServiceMenu() : Promise.resolve([]),
+    ]);
 
-  const scopeTech = view === "mine" || !session.canManageFloor ? focusTechId : null;
-  const [{ items, error }, customers, services] = await Promise.all([
-    getScheduleOverlay(from, to, scopeTech),
-    session.canManageFloor ? getCustomerOptions() : Promise.resolve([]),
-    session.canManageFloor ? getServiceMenu() : Promise.resolve([]),
-  ]);
-
-  const spanDays =
-    view === "mine"
-      ? Array.from({ length: span }, (_, i) => {
-          const d = new Date(year, month - 1, day + i);
-          return {
-            value: toDateInputValue(d),
-            label: `${d.toLocaleDateString("en-US", { weekday: "short" })} ${d.getMonth() + 1}/${d.getDate()}`,
-            date: d,
-          };
-        })
-      : undefined;
-
-  const focusName = techs.find((tech) => tech.id === focusTechId)?.full_name ?? "";
-
-  return (
-    <div className="space-y-5">
-      <Header
-        view={view}
-        canManageFloor={session.canManageFloor}
-        linkTo={linkTo}
-        subtitle={
-          view === "mine"
-            ? `${focusName} · from ${formatDate(from.toISOString())} · ${items.length} ${items.length === 1 ? "entry" : "entries"}`
-            : `${formatDate(anchor.toISOString())} · ${items.length} ${items.length === 1 ? "entry" : "entries"}`
-        }
-      />
-
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {surroundingDays(anchor).map((entry) => (
-          <Link
-            key={entry.value}
-            href={linkTo({ date: entry.value })}
-            className={cn(
-              "flex min-h-[3.25rem] min-w-[3.25rem] shrink-0 flex-col items-center justify-center rounded-xl border px-3 transition-colors",
-              entry.value === dateStr
-                ? "border-transparent bg-accent-default text-on-accent"
-                : "border-subtle bg-surface-raised text-secondary-text hover:bg-surface-overlay",
-            )}
-          >
-            <span className="text-meta font-semibold uppercase">{entry.weekday}</span>
-            <span className="text-base font-semibold leading-tight tabular-nums">{entry.day}</span>
-          </Link>
-        ))}
-      </div>
-
-      {/* Only the personal view is one tech at a time, so only it needs a picker. */}
-      {session.canManageFloor && view === "mine" && techs.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {techs.map((tech) => (
-            <Link
-              key={tech.id}
-              href={linkTo({ tech: tech.id })}
-              className={cn(
-                "min-h-11 rounded-full border px-4 py-2 text-sm font-medium transition-colors",
-                tech.id === focusTechId
-                  ? "border-transparent bg-surface-overlay text-primary-text"
-                  : "border-subtle bg-surface-raised text-secondary-text hover:bg-surface-overlay",
-              )}
-            >
-              {tech.full_name}
-            </Link>
-          ))}
-        </div>
-      ) : null}
-
-      <Legend />
-
-      {error ? (
-        <ScheduleError message={error} />
-      ) : (
-        <DayBoard
-          // "mine" reuses the week board: one tech, columns of days.
-          view={view === "mine" ? "week" : "day"}
-          date={anchor}
-          dateStr={dateStr}
-          techs={view === "mine" ? techs.filter((tech) => tech.id === focusTechId) : techs}
-          items={items}
-          openHour={openHour}
-          closeHour={closeHour}
-          currentUserId={session.userId}
+    return (
+      <div className="space-y-5">
+        <Header
+          view={view}
           canManageFloor={session.canManageFloor}
-          weekDays={spanDays}
-          customers={customers}
-          fullTechs={allTechs}
-          services={services}
+          linkTo={linkTo}
+          subtitle={formatDate(anchor.toISOString())}
         />
-      )}
 
-      <p className="text-meta text-muted-text">
-        Tap an empty slot to add hours · Chạm vào ô trống để thêm giờ
-      </p>
-    </div>
-  );
+        {error || !data ? (
+          <ScheduleError message={error ?? "The day wouldn't load."} />
+        ) : (
+          <>
+            <DayHeader
+              dateStr={dateStr}
+              timezone={data.timezone}
+              query={{
+                view: "day",
+                ...(session.canManageFloor ? { tech: focusTechId } : {}),
+              }}
+              techCount={data.techs.length}
+              bookingCount={data.appointments.length}
+            />
+            <DayCalendar
+              data={data}
+              canManageFloor={session.canManageFloor}
+              currentUserId={session.userId}
+              customers={customers}
+              techs={allTechs}
+              services={services}
+            />
+          </>
+        )}
+
+        <p className="text-meta text-muted-text">
+          Tap a booking to open it · Tap open time to book · Chạm để mở
+        </p>
+      </div>
+    );
+  }
+
 }
 
 const VIEW_META: Record<View, { label: string; icon: typeof CalendarDays }> = {
   month: { label: "Month", icon: CalendarDays },
   day: { label: "Day", icon: CalendarClock },
-  mine: { label: "3 days", icon: UserCheck },
 };
 
 function Header({
@@ -276,7 +219,9 @@ function Header({
   canManageFloor: boolean;
 }) {
   // A tech has no floor view to look at — every column would be their own.
-  const views: View[] = canManageFloor ? ["month", "day", "mine"] : ["month", "mine"];
+  // Both roles get both views. The day view scopes itself: a tech opens on
+  // their own column and can widen to the floor from inside it.
+  const views: View[] = ["month", "day"];
 
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
@@ -313,47 +258,6 @@ function Header({
   );
 }
 
-function Legend() {
-  const items = [
-    {
-      icon: UserCheck,
-      label: "Working",
-      vi: "Đang làm",
-      cls: "bg-accent-subtle border-accent-default/50",
-      hatch: false,
-    },
-    {
-      icon: CalendarClock,
-      label: "Appointment",
-      vi: "Lịch hẹn",
-      cls: "bg-info-bg border-info-border text-info",
-      hatch: true,
-    },
-    {
-      icon: Footprints,
-      label: "Walk-in",
-      vi: "Khách vãng lai",
-      cls: "bg-warning-bg border-warning-border text-warning",
-      hatch: true,
-    },
-  ];
-
-  return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-      {items.map(({ icon: Icon, label, vi, cls, hatch }) => (
-        <span key={label} className="inline-flex items-center gap-2 text-meta text-muted-text">
-          <span className={cn("size-4 rounded border", cls, hatch && "fill-hatched")} />
-          <Icon className="size-3.5" />
-          {label} <span className="opacity-70">· {vi}</span>
-        </span>
-      ))}
-      <span className="text-meta text-muted-text">
-        Bookings and walk-ins appear on their own · Lịch hẹn tự hiện lên
-      </span>
-    </div>
-  );
-}
-
 function ScheduleError({ message }: { message: string }) {
   return (
     <Card className="border-danger-border">
@@ -376,23 +280,7 @@ function SchedulePending() {
     <div className="space-y-5">
       <div className="h-9 w-56 animate-pulse rounded-lg bg-surface-overlay" />
       <div className="h-14 w-full animate-pulse rounded-xl bg-surface-overlay" />
-      <ScheduleBoardSkeleton />
+      <DayCalendarSkeleton />
     </div>
   );
-}
-
-/** Five days either side, so a week is reachable without a date picker. */
-function surroundingDays(selected: Date) {
-  return Array.from({ length: 11 }, (_, index) => {
-    const date = new Date(
-      selected.getFullYear(),
-      selected.getMonth(),
-      selected.getDate() + index - 5,
-    );
-    return {
-      value: toDateInputValue(date),
-      weekday: date.toLocaleDateString("en-US", { weekday: "short" }),
-      day: date.getDate(),
-    };
-  });
 }

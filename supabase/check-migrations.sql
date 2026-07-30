@@ -62,6 +62,8 @@ from (
                  where table_schema = 'public' and table_name = 'services'
                    and column_name = 'category')),
     (21, '20260728200000_multi_service.sql',
-         to_regclass('public.appointment_services') is not null)
+         to_regclass('public.appointment_services') is not null),
+    (22, '20260728210000_day_calendar.sql',
+         to_regprocedure('public.day_calendar(date, uuid)') is not null)
 ) as t (step, file, applied)
 order by step;

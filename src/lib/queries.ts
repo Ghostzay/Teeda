@@ -9,6 +9,7 @@ import type {
   AvailabilityPattern,
   Customer,
   DayAvailability,
+  DayCalendar,
   FloorStatus,
   JobStatus,
   JobWithRelations,
@@ -570,6 +571,29 @@ export async function getCommissionRates(): Promise<Map<string, number | null>> 
  * schedule is exactly where that is least acceptable. The page renders the
  * message instead.
  */
+/**
+ * One day of the floor calendar, in one round trip.
+ *
+ * Deliberately a single call: the previous day view fetched an overlay and then
+ * worked out columns, durations and the day's bounds in the browser, which is
+ * three places to disagree about a timezone. Everything comes back already
+ * resolved to salon-local minutes.
+ */
+export async function getDayCalendar(
+  day: string,
+  techId?: string | null,
+): Promise<{ data: DayCalendar | null; error: string | null }> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("day_calendar", {
+    p_day: day,
+    p_tech_id: techId ?? null,
+  });
+
+  if (error) return { data: null, error: describeSetupError(error) };
+  return { data: data as DayCalendar, error: null };
+}
+
 export async function getScheduleOverlay(
   from: Date,
   to: Date,

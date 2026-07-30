@@ -82,6 +82,47 @@ export type AppointmentService = Tables<"appointment_services">;
 export type BasketLine = FunctionReturns<"appointment_basket">[number];
 
 /**
+ * One day of the floor calendar.
+ *
+ * Every `*_min` field is **salon-local minutes from midnight**, resolved once
+ * by `day_calendar()` in SQL. Nothing downstream parses a date or names a
+ * timezone — that is what makes the grid immune to the hour that DST moves.
+ */
+export type DayCalendar = {
+  day: string;
+  timezone: string;
+  open_minute: number;
+  close_minute: number;
+  techs: { id: string; full_name: string; has_shift: boolean }[];
+  bands: CalendarBand[];
+  appointments: CalendarAppointment[];
+  /** Bookings with nobody assigned — they get their own column. */
+  unassigned_count: number;
+};
+
+export type CalendarBand = {
+  tech_id: string;
+  kind: ShiftKind;
+  note: string | null;
+  start_min: number;
+  end_min: number;
+};
+
+export type CalendarAppointment = {
+  id: string;
+  tech_id: string | null;
+  customer_id: string;
+  client_name: string;
+  status: AppointmentStatus;
+  notes: string | null;
+  service_name: string;
+  /** The basket joined up, or the single service name. */
+  services: string;
+  start_min: number;
+  duration_min: number;
+};
+
+/**
  * ISO weekday numbering, matching Postgres `extract(isodow)`. Monday-first
  * because that is how a rota is read, and because the month grid is too.
  */

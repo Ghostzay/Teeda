@@ -1047,6 +1047,15 @@ export type Database = {
         Args: { p_day: string };
         Returns: { starts_at: string; ends_at: string }[];
       };
+      appointment_minutes: {
+        Args: { p_appointment_id: string };
+        Returns: number;
+      };
+      day_calendar: {
+        Args: { p_day: string; p_tech_id?: string | null };
+        // A JSON document; the shape lives in `DayCalendar` in lib/types.
+        Returns: unknown;
+      };
       service_menu: {
         Args: { p_include_inactive?: boolean };
         Returns: {

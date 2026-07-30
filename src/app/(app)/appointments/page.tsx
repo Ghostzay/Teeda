@@ -24,12 +24,15 @@ export const dynamic = "force-dynamic";
 export default async function AppointmentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; tech?: string; at?: string }>;
 }) {
   const session = await requireSession();
-  const { date } = await searchParams;
+  const { date, tech, at } = await searchParams;
 
   const selectedDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : toDateInputValue();
+  // Tapping open time on the day calendar lands here with the tech and the
+  // minute already chosen, so the desk types only the client and the service.
+  const prefillTime = at && /^\d{2}:\d{2}$/.test(at) ? at : undefined;
   const range = await getSalonDayBounds(selectedDate);
 
   const [appointments, customers, techs, services] = await Promise.all([
@@ -70,6 +73,8 @@ export default async function AppointmentsPage({
                 techs={techs}
                 services={services}
                 defaultDate={selectedDate}
+                defaultTime={prefillTime}
+                defaultTechId={tech && techs.some((t) => t.id === tech) ? tech : undefined}
               />
             </CardContent>
           </Card>
