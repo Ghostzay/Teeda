@@ -70,6 +70,10 @@ export type Database = {
           default_theme: string;
           timezone: string;
           default_dashboard_layout: Json | null;
+          checkin_early_minutes: number;
+          checkin_late_minutes: number;
+          /** bcrypt. Never sent to a client — coerced to a boolean server-side. */
+          kiosk_exit_pin_hash: string | null;
         };
         Insert: {
           id?: string;
@@ -83,6 +87,9 @@ export type Database = {
           default_theme?: string;
           timezone?: string;
           default_dashboard_layout?: Json | null;
+          checkin_early_minutes?: number;
+          checkin_late_minutes?: number;
+          kiosk_exit_pin_hash?: string | null;
         };
         Update: {
           id?: string;
@@ -96,6 +103,9 @@ export type Database = {
           default_theme?: string;
           timezone?: string;
           default_dashboard_layout?: Json | null;
+          checkin_early_minutes?: number;
+          checkin_late_minutes?: number;
+          kiosk_exit_pin_hash?: string | null;
         };
         Relationships: [];
       };
@@ -471,6 +481,36 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      kiosk_devices: {
+        Row: {
+          id: string;
+          salon_id: string;
+          label: string;
+          is_active: boolean;
+          last_seen_at: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          salon_id: string;
+          label: string;
+          is_active?: boolean;
+          last_seen_at?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          salon_id?: string;
+          label?: string;
+          is_active?: boolean;
+          last_seen_at?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       appointment_services: {
         Row: {
@@ -1051,6 +1091,33 @@ export type Database = {
         Args: { p_appointment_id: string };
         Returns: number;
       };
+      kiosk_context: {
+        Args: Record<string, never>;
+        // JSON; shape lives in `KioskContext` in lib/types.
+        Returns: unknown;
+      };
+      kiosk_lookup_client: {
+        Args: { p_phone: string };
+        // JSON; shape lives in `KioskLookup` in lib/types.
+        Returns: unknown;
+      };
+      kiosk_checkin: {
+        Args: { p_appointment_id: string };
+        // JSON; shape lives in `KioskCheckin` in lib/types.
+        Returns: unknown;
+      };
+      kiosk_check_exit_pin: {
+        Args: { p_pin: string };
+        Returns: boolean;
+      };
+      set_kiosk_exit_pin: {
+        Args: { p_pin: string };
+        Returns: undefined;
+      };
+      register_kiosk_device: {
+        Args: { p_user_id: string; p_label: string };
+        Returns: Database["public"]["Tables"]["kiosk_devices"]["Row"];
+      };
       day_calendar: {
         Args: { p_day: string; p_tech_id?: string | null };
         // A JSON document; the shape lives in `DayCalendar` in lib/types.
@@ -1338,7 +1405,7 @@ export type Database = {
       };
     };
     Enums: {
-      user_role: "super_admin" | "manager" | "admin" | "tech";
+      user_role: "super_admin" | "manager" | "admin" | "tech" | "kiosk";
       payment_method: "cash" | "card" | "other";
       skill: "manicure" | "pedicure" | "gel" | "acrylic" | "dip" | "nail_art" | "waxing" | "lash";
       block_kind: "appointment" | "break" | "unavailable";

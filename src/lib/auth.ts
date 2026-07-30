@@ -3,8 +3,9 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 
+import { homeForRole } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { SessionContext } from "@/lib/types";
+import type { SessionContext, UserRole } from "@/lib/types";
 
 /** The raw auth user, with no profile requirement. */
 export const getAuthUser = cache(async () => {
@@ -59,27 +60,64 @@ export const getSessionContext = cache(async (): Promise<SessionContext | null> 
     isManager: profile.role === "manager" || profile.role === "super_admin",
     isAdmin: profile.role === "admin",
     isTech: profile.role === "tech",
-    canManageFloor: profile.role !== "tech",
+    isKiosk: profile.role === "kiosk",
+    // An allow-list, not `role !== "tech"`.
+    //
+    // Deny-by-exception reads the same until the day a role is added, and then
+    // it silently grants: `kiosk` would have arrived holding floor access —
+    // rendering the dashboard, the queue and the payment controls on a tablet
+    // pointed at the waiting room. The SQL side (`can_manage_floor()`) has
+    // always been an allow-list; this is the app agreeing with it.
+    canManageFloor: FLOOR_ROLES.includes(profile.role),
   };
 });
 
-/** Use in any authenticated page/action. Redirects instead of returning null. */
+/** Who may work the floor. Mirrors `can_manage_floor()` in SQL, exactly. */
+const FLOOR_ROLES: UserRole[] = ["manager", "admin", "super_admin"];
+
+/**
+ * Use in any authenticated page/action. Redirects instead of returning null.
+ *
+ * A kiosk is bounced here rather than only in the middleware. Every staff page
+ * in the app already funnels through this function, so closing it here closes
+ * all of them at once — including any page added later, whose author will not
+ * think about kiosks. The middleware does the same check earlier and cheaper;
+ * this is the one that cannot be skipped by a route the matcher misses.
+ */
 export async function requireSession(): Promise<SessionContext> {
   const session = await getSessionContext();
   if (!session) redirect("/login");
+  if (session.isKiosk) redirect("/kiosk");
   return session;
 }
 
 /** Manager only — salon settings, the team roster, takings. */
 export async function requireManager(): Promise<SessionContext> {
   const session = await requireSession();
-  if (!session.isManager) redirect(session.canManageFloor ? "/dashboard" : "/tech");
+  if (!session.isManager) redirect(homeForRole(session.role));
   return session;
 }
 
 /** Manager or admin — check-ins, jobs, the queue, payments. */
 export async function requireFloorAccess(): Promise<SessionContext> {
   const session = await requireSession();
-  if (!session.canManageFloor) redirect("/tech");
+  if (!session.canManageFloor) redirect(session.isKiosk ? "/kiosk" : "/tech");
+  return session;
+}
+
+/**
+ * The kiosk's own guard.
+ *
+ * The middleware already keeps other roles off /kiosk, but middleware is a
+ * redirect, not a boundary: it does not run on every path a request can take
+ * to a Server Component, and a matcher is one config edit away from a hole.
+ * This runs inside the layout, so the page cannot render without it.
+ */
+export async function requireKiosk(): Promise<SessionContext> {
+  // Deliberately `getSessionContext`, not `requireSession` — that one bounces
+  // kiosks to /kiosk, which from inside /kiosk is a redirect loop.
+  const session = await getSessionContext();
+  if (!session) redirect("/login");
+  if (!session.isKiosk) redirect(homeForRole(session.role));
   return session;
 }

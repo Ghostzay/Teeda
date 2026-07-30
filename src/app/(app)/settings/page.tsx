@@ -3,6 +3,7 @@ import { Scissors, Users } from "lucide-react";
 
 import { ActionForm } from "@/components/action-form";
 import { AppearanceSettings } from "@/components/appearance-settings";
+import { KioskDevices } from "@/components/kiosk/kiosk-devices";
 import { DashboardDefaultForm } from "@/components/dashboard-default-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { saveTimezone } from "@/lib/actions/appearance";
 import { updateOwnName, updateSalon } from "@/lib/actions/salon";
 import { requireManager } from "@/lib/auth";
+import { getKioskDevices } from "@/lib/queries";
 import { resolveLayout, toStored } from "@/lib/dashboard";
 import { formatDate } from "@/lib/format";
 
@@ -22,6 +24,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function SettingsPage() {
   const session = await requireManager();
+  const { devices: kioskDevices, hasExitPin } = await getKioskDevices();
 
   // What this manager currently sees, ready to publish as the starting point
   // for anyone who has not arranged their own.
@@ -157,6 +160,8 @@ export default async function SettingsPage() {
           description="Client records, phone numbers and notes."
         />
       </div>
+      <KioskDevices devices={kioskDevices} hasExitPin={hasExitPin} />
+
     </div>
   );
 }

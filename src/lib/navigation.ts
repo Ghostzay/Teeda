@@ -118,6 +118,10 @@ export function navForRole(role: UserRole): NavGroup[] {
   if (role === "super_admin") return MANAGER_NAV;
   if (role === "manager") return MANAGER_NAV;
   if (role === "admin") return ADMIN_NAV;
+  // A kiosk has no navigation at all — it renders its own shell and never the
+  // app's. Returning the tech's menu by falling through would put a link to
+  // the earnings screen one stray render away from a customer's hands.
+  if (role === "kiosk") return [];
   return TECH_NAV;
 }
 
@@ -128,5 +132,10 @@ export function navItemsForRole(role: UserRole): NavItem[] {
 
 /** Where each role lands after signing in. */
 export function homeForRole(role: UserRole): string {
-  return role === "tech" ? "/tech" : "/dashboard";
+  // Named cases, not "everything that isn't a tech". The default branch is
+  // where a new role silently lands, and for a kiosk that default was the
+  // dashboard — the one screen it exists to never show.
+  if (role === "kiosk") return "/kiosk";
+  if (role === "tech") return "/tech";
+  return "/dashboard";
 }

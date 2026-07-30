@@ -64,6 +64,10 @@ from (
     (21, '20260728200000_multi_service.sql',
          to_regclass('public.appointment_services') is not null),
     (22, '20260728210000_day_calendar.sql',
-         to_regprocedure('public.day_calendar(date, uuid)') is not null)
+         to_regprocedure('public.day_calendar(date, uuid)') is not null),
+    (23, '20260728220000_add_kiosk_role.sql',
+         'kiosk' = any (enum_range(null::public.user_role)::text[])),
+    (24, '20260728230000_kiosk.sql',
+         to_regclass('public.kiosk_devices') is not null)
 ) as t (step, file, applied)
 order by step;

@@ -13,6 +13,7 @@ import type {
   FloorStatus,
   JobStatus,
   JobWithRelations,
+  KioskDevice,
   PaymentTotals,
   Profile,
   SalonEarningsRow,
@@ -609,4 +610,26 @@ export async function getScheduleOverlay(
 
   if (error) return { items: [], error: describeSetupError(error) };
   return { items: data ?? [], error: null };
+}
+
+/**
+ * The salon's check-in tablets, for the settings screen.
+ *
+ * `hasExitPin` rather than the PIN: the hash never needs to leave the database
+ * and a boolean is all the UI can act on.
+ */
+export async function getKioskDevices(): Promise<{
+  devices: KioskDevice[];
+  hasExitPin: boolean;
+}> {
+  const supabase = await createClient();
+
+  const [{ data: devices }, { data: salon }] = await Promise.all([
+    supabase.from("kiosk_devices").select("*").order("label", { ascending: true }),
+    // Only ever coerced to a boolean here: the hash has no business crossing
+    // into a client component, and there is nothing the UI can do with it.
+    supabase.from("salons").select("kiosk_exit_pin_hash").maybeSingle(),
+  ]);
+
+  return { devices: devices ?? [], hasExitPin: Boolean(salon?.kiosk_exit_pin_hash) };
 }

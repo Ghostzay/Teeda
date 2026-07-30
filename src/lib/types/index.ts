@@ -78,6 +78,57 @@ export type ServiceTechOption = FunctionReturns<"techs_for_service">[number];
 /** One line of what a client booked. A visit can be several services. */
 export type AppointmentService = Tables<"appointment_services">;
 
+/**
+ * A tablet by the door. Its `profiles` row carries role 'kiosk', which every
+ * restrictive policy in the database tests for.
+ */
+export type KioskDevice = Tables<"kiosk_devices">;
+
+/** What the idle screen needs. No client data, so no rate limit on it. */
+export type KioskContext = {
+  salon_name: string;
+  device_label: string;
+  early_minutes: number;
+  late_minutes: number;
+  has_exit_pin: boolean;
+};
+
+/**
+ * The answer to a phone lookup.
+ *
+ * `no_match` is deliberately indistinguishable between "that number is not a
+ * client", "you typed nine digits" and "you typed a name" — the screen faces a
+ * waiting room, and a different answer per case is a client directory.
+ */
+export type KioskLookup =
+  | { result: "no_match" }
+  | { result: "rate_limited" }
+  | {
+      result: "found";
+      client_name: string;
+      masked_phone: string;
+      state: "no_appointment";
+      appointment: null;
+    }
+  | {
+      result: "found";
+      client_name: string;
+      masked_phone: string;
+      state: "ready" | "too_early" | "too_late" | "already_checked_in" | "already_done";
+      minutes_until: number;
+      appointment: {
+        id: string;
+        scheduled_at: string;
+        services: string;
+        tech_name: string | null;
+        status: AppointmentStatus;
+      };
+    };
+
+export type KioskCheckin =
+  | { result: "checked_in"; tech_name: string | null; ahead: number }
+  | { result: "not_found" | "already_checked_in" | "not_checkable" | "outside_window" };
+
 /** A booking's basket, as the edit sheet reads it back. */
 export type BasketLine = FunctionReturns<"appointment_basket">[number];
 
@@ -176,9 +227,14 @@ export type TechEarnings = {
 /**
  * The signed-in user plus their salon — resolved once per request.
  *
- * Three roles, two capability lines:
+ * Capability lines, narrowest last:
  *   canManageFloor  manager + admin — check-ins, jobs, queue, payments
  *   isManager       manager only    — salon settings, team roster, money reports
+ *   isKiosk         a device, not a person — no floor access, no direct reads
+ *
+ * `canManageFloor` is computed from an allow-list. It has to be: when it was
+ * `role !== "tech"`, adding any new role granted it floor access by default,
+ * and the kiosk would have shipped rendering the salon's takings.
  */
 export type SessionContext = {
   userId: string;
@@ -190,6 +246,7 @@ export type SessionContext = {
   isManager: boolean;
   isAdmin: boolean;
   isTech: boolean;
+  isKiosk: boolean;
   canManageFloor: boolean;
 };
 
@@ -236,6 +293,7 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   manager: "Manager",
   admin: "Admin",
   tech: "Tech",
+  kiosk: "Kiosk device",
 };
 
 export const ROLE_DESCRIPTION: Record<UserRole, string> = {
@@ -243,6 +301,7 @@ export const ROLE_DESCRIPTION: Record<UserRole, string> = {
   manager: "Full access, including settings, team and takings.",
   admin: "Runs the floor — check-ins, jobs, queue and payments. No settings.",
   tech: "Their own turn, clients and appointments.",
+  kiosk: "A check-in tablet. Reads nothing directly — only what the check-in screen shows.",
 };
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
