@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { UserPlus, X } from "lucide-react";
 
 import { ActionForm } from "@/components/action-form";
 import { Input } from "@/components/ui/input";
@@ -9,19 +8,19 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Textarea } from "@/components/ui/textarea";
+import { ClientSearchSelect } from "@/components/clients/ClientSearchSelect";
+import { NewClientFields, type NewClientPrefill } from "@/components/clients/new-client-fields";
 import { ServicePicker } from "@/components/service-picker";
 import { createAppointment } from "@/lib/actions/appointments";
-import type { Customer, Profile, ServiceMenuItem } from "@/lib/types";
+import type { ClientSearchRow, Profile, ServiceMenuItem } from "@/lib/types";
 
 export function AppointmentForm({
-  customers,
   techs,
   services,
   defaultDate,
   defaultTime,
   defaultTechId,
 }: {
-  customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
   /** The salon menu — booking off it carries price and required skills. */
   services: ServiceMenuItem[];
@@ -30,7 +29,8 @@ export function AppointmentForm({
   defaultTime?: string;
   defaultTechId?: string;
 }) {
-  const [isNewCustomer, setIsNewCustomer] = useState(customers.length === 0);
+  const [client, setClient] = useState<ClientSearchRow | null>(null);
+  const [prefill, setPrefill] = useState<NewClientPrefill | null>(null);
   const [picked, setPicked] = useState<ServiceMenuItem[]>([]);
   // The picker owns its basket, so a reset needs a remount, not a state poke.
   const [pickerKey, setPickerKey] = useState(0);
@@ -42,50 +42,25 @@ export function AppointmentForm({
       action={createAppointment}
       className="space-y-4"
       onSuccess={() => {
-        setIsNewCustomer(customers.length === 0);
+        setClient(null);
+        setPrefill(null);
         setPicked([]);
         setPickerKey((value) => value + 1);
       }}
     >
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="appt_customer">Client</Label>
-          <button
-            type="button"
-            onClick={() => setIsNewCustomer((value) => !value)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary"
-          >
-            {isNewCustomer ? (
-              <>
-                <X className="size-3" /> Pick existing
-              </>
-            ) : (
-              <>
-                <UserPlus className="size-3" /> New client
-              </>
-            )}
-          </button>
-        </div>
-
-        {isNewCustomer ? (
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Input name="new_customer_name" placeholder="Client name" required autoComplete="off" />
-            <Input name="new_customer_phone" type="tel" placeholder="Phone (optional)" autoComplete="off" />
-          </div>
-        ) : (
-          <Select id="appt_customer" name="customer_id" required defaultValue="">
-            <option value="" disabled>
-              Select a client…
-            </option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-                {customer.phone ? ` · ${customer.phone}` : ""}
-              </option>
-            ))}
-          </Select>
-        )}
-      </div>
+      {/* One search, server-side. The old prefetched <select> shipped every
+          client to the browser; "New client" now lives behind a search that
+          found nobody, which is also the duplicate check. */}
+      <ClientSearchSelect
+        value={client}
+        onChange={setClient}
+        name="customer_id"
+        required
+        onAddNew={setPrefill}
+      />
+      {prefill ? (
+        <NewClientFields prefill={prefill} onCancel={() => setPrefill(null)} />
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">

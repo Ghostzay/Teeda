@@ -153,19 +153,13 @@ export async function getCustomers(search?: string): Promise<Customer[]> {
   return data ?? [];
 }
 
-/** Minimal customer list for the pickers on the job and appointment forms. */
-export async function getCustomerOptions(): Promise<Pick<Customer, "id" | "name" | "phone">[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("customers")
-    .select("id, name, phone")
-    .order("name", { ascending: true })
-    .limit(500);
-
-  if (error) throw new Error(`Failed to load customers: ${error.message}`);
-  return data ?? [];
-}
+/*
+ * `getCustomerOptions()` lived here. It fetched up to five hundred clients so a
+ * `<select>` could filter them in the browser — which put the salon's client
+ * list in the page source of every booking form, and quietly omitted anybody
+ * past the limit. Replaced by `staff_search_clients`, which never sends more
+ * than ten rows and only ones that were asked for.
+ */
 
 export async function getStaff(): Promise<Profile[]> {
   const supabase = await createClient();

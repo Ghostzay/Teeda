@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ImagePlus, Loader2, UserPlus, X } from "lucide-react";
+import { ImagePlus, Loader2 } from "lucide-react";
 
 import { ActionForm } from "@/components/action-form";
+import { ClientSearchSelect } from "@/components/clients/ClientSearchSelect";
+import { NewClientFields, type NewClientPrefill } from "@/components/clients/new-client-fields";
 import { ServicePicker } from "@/components/service-picker";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -13,20 +14,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/toast";
 import { createJob } from "@/lib/actions/jobs";
 import { createClient } from "@/lib/supabase/client";
-import type { Customer, Profile, ServiceMenuItem } from "@/lib/types";
+import type { ClientSearchRow, Profile, ServiceMenuItem } from "@/lib/types";
 
 /**
  * Check-in form. Tech defaults to "Next in rotation", so the fair path is the
  * path of least resistance; a manager can override in the same tap.
  */
 export function JobForm({
-  customers,
   techs,
   services,
   salonId,
   suggestedTechName,
 }: {
-  customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
   /** The salon menu. Picking from it sets the price and required skills. */
   services: ServiceMenuItem[];
@@ -34,7 +33,8 @@ export function JobForm({
   suggestedTechName: string | null;
 }) {
   const [picked, setPicked] = useState<ServiceMenuItem[]>([]);
-  const [isNewCustomer, setIsNewCustomer] = useState(customers.length === 0);
+  const [client, setClient] = useState<ClientSearchRow | null>(null);
+  const [prefill, setPrefill] = useState<NewClientPrefill | null>(null);
   const [photoUrl, setPhotoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   // Bumped on success to remount the picker — it holds its own basket, and a
@@ -78,53 +78,20 @@ export function JobForm({
         setPhotoUrl("");
         setPicked([]);
         setPickerKey((value) => value + 1);
-        setIsNewCustomer(customers.length === 0);
+        setClient(null);
+        setPrefill(null);
       }}
     >
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="customer">Client</Label>
-          <button
-            type="button"
-            onClick={() => setIsNewCustomer((value) => !value)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary"
-          >
-            {isNewCustomer ? (
-              <>
-                <X className="size-3" /> Pick existing
-              </>
-            ) : (
-              <>
-                <UserPlus className="size-3" /> New client
-              </>
-            )}
-          </button>
-        </div>
-
-        {isNewCustomer ? (
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Input name="new_customer_name" placeholder="Client name" autoComplete="off" required />
-            <Input
-              name="new_customer_phone"
-              type="tel"
-              placeholder="Phone (optional)"
-              autoComplete="off"
-            />
-          </div>
-        ) : (
-          <Select id="customer" name="customer_id" required defaultValue="">
-            <option value="" disabled>
-              Select a client…
-            </option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-                {customer.phone ? ` · ${customer.phone}` : ""}
-              </option>
-            ))}
-          </Select>
-        )}
-      </div>
+      <ClientSearchSelect
+        value={client}
+        onChange={setClient}
+        name="customer_id"
+        required
+        onAddNew={setPrefill}
+      />
+      {prefill ? (
+        <NewClientFields prefill={prefill} onCancel={() => setPrefill(null)} />
+      ) : null}
 
       <div className="space-y-1.5">
         <Label>Services</Label>

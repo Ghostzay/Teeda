@@ -75,6 +75,15 @@ export type ServiceMenuItem = FunctionReturns<"service_menu">[number];
 /** A tech, and whether they hold what a given service needs. */
 export type ServiceTechOption = FunctionReturns<"techs_for_service">[number];
 
+/**
+ * One row of the client search.
+ *
+ * Deliberately narrow: enough to tell two Maria Gonzalezes apart at a glance —
+ * last four digits, last visit, usual tech — and nothing more. A picker is not
+ * a client record.
+ */
+export type ClientSearchRow = FunctionReturns<"staff_search_clients">[number];
+
 /** One line of what a client booked. A visit can be several services. */
 export type AppointmentService = Tables<"appointment_services">;
 

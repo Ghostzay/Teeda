@@ -1115,6 +1115,22 @@ export type Database = {
         // JSON; shape lives in `KioskCheckin` in lib/types.
         Returns: unknown;
       };
+      staff_search_clients: {
+        Args: { q?: string; lim?: number };
+        Returns: {
+          id: string;
+          first_name: string | null;
+          last_name: string | null;
+          phone_last4: string | null;
+          last_visit: string | null;
+          usual_tech: string | null;
+          is_active: boolean;
+        }[];
+      };
+      staff_recent_clients: {
+        Args: { lim?: number };
+        Returns: Database["public"]["Functions"]["staff_search_clients"]["Returns"];
+      };
       kiosk_service_menu: {
         Args: Record<string, never>;
         Returns: {

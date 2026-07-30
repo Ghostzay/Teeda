@@ -6,7 +6,7 @@ import { JobForm } from "@/components/job-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireFloorAccess } from "@/lib/auth";
-import { getActiveTechs, getCustomerOptions, getJobs, getServiceMenu } from "@/lib/queries";
+import { getActiveTechs, getJobs, getServiceMenu } from "@/lib/queries";
 import { suggestNextTechDetailed } from "@/lib/turn";
 import { cn } from "@/lib/utils";
 import type { JobStatus } from "@/lib/types";
@@ -35,12 +35,11 @@ export default async function JobsPage({
 
   const active = FILTERS.find((option) => option.key === filter) ?? FILTERS[0];
 
-  const [jobs, customers, techs, services, suggestion] = await Promise.all([
+  const [jobs, techs, services, suggestion] = await Promise.all([
     getJobs({
       statuses: active.statuses ? [...active.statuses] : undefined,
       todayOnly: active.key === "completed" || active.key === "all",
     }),
-    getCustomerOptions(),
     getActiveTechs(),
     getServiceMenu(),
     suggestNextTechDetailed(session.salon.id),
@@ -72,7 +71,6 @@ export default async function JobsPage({
           </CardHeader>
           <CardContent>
             <JobForm
-              customers={customers}
               techs={techs}
               services={services}
               salonId={session.salon.id}

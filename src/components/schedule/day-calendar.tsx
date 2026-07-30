@@ -30,7 +30,6 @@ import {
 import { initials } from "@/lib/format";
 import type {
   AppointmentStatus,
-  Customer,
   DayCalendar as DayCalendarData,
   Profile,
   ServiceMenuItem,
@@ -87,14 +86,12 @@ export function DayCalendar({
   data,
   canManageFloor,
   currentUserId,
-  customers,
   techs,
   services,
 }: {
   data: DayCalendarData;
   canManageFloor: boolean;
   currentUserId: string;
-  customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
   services: ServiceMenuItem[];
 }) {
@@ -303,7 +300,6 @@ export function DayCalendar({
 
       <AppointmentSheet
         appointment={open}
-        customers={customers}
         techs={techs}
         services={services}
         canManageFloor={canManageFloor}

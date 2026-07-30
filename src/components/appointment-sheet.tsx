@@ -6,6 +6,7 @@ import { CalendarClock, Pencil, Phone, StickyNote, UserRound, X } from "lucide-r
 
 import { ActionButton } from "@/components/action-button";
 import { ActionForm } from "@/components/action-form";
+import { ClientSearchSelect } from "@/components/clients/ClientSearchSelect";
 import { ServicePicker } from "@/components/service-picker";
 import { AppointmentStatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cancelAppointment, checkInAppointment, updateAppointmentAction } from "@/lib/actions/appointments";
 import { formatDate, formatPhone, formatTime } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
-import type { AppointmentWithRelations, Customer, Profile, ServiceMenuItem } from "@/lib/types";
+import type { AppointmentWithRelations, ClientSearchRow, Profile, ServiceMenuItem } from "@/lib/types";
 
 export type SheetAppointment = {
   id: string;
@@ -80,14 +81,12 @@ function splitLocal(iso: string): { date: string; time: string } {
  */
 export function AppointmentSheet({
   appointment,
-  customers,
   techs,
   services,
   canManageFloor,
   onClose,
 }: {
   appointment: SheetAppointment | null;
-  customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
   services: ServiceMenuItem[];
   canManageFloor: boolean;
@@ -97,11 +96,31 @@ export function AppointmentSheet({
   const [editing, setEditing] = useState(false);
   /** `null` while it is still being read — an empty array is a real answer. */
   const [basket, setBasket] = useState<string[] | null>(null);
+  // The sheet knows who the booking is for; seed the picker from that so the
+  // usual edit does not start by making somebody search for a name they can
+  // already see at the top of the drawer.
+  const [client, setClient] = useState<ClientSearchRow | null>(null);
 
   const appointmentId = appointment?.id ?? null;
 
   // Read the basket when the editor opens rather than when the sheet does:
   // most opens are a look, not an edit, and this is a round trip.
+  useEffect(() => {
+    if (!editing || !appointment) return;
+    setClient({
+      id: appointment.customer_id ?? "",
+      first_name: (appointment.customer_name ?? "").split(" ")[0] || null,
+      last_name: (appointment.customer_name ?? "").split(" ").slice(1).join(" ") || null,
+      phone_last4: appointment.customer_phone
+        ? appointment.customer_phone.replace(/\D/g, "").slice(-4)
+        : null,
+      last_visit: null,
+      usual_tech: null,
+      is_active: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, appointmentId]);
+
   useEffect(() => {
     if (!editing || !appointmentId) return;
 
@@ -178,21 +197,14 @@ export function AppointmentSheet({
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="ap_customer">Client</Label>
-              <Select
-                id="ap_customer"
-                name="customer_id"
-                defaultValue={appointment.customer_id ?? ""}
-              >
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name}
-                    {customer.phone ? ` · ${formatPhone(customer.phone)}` : ""}
-                  </option>
-                ))}
-              </Select>
-            </div>
+            {/* Seeded with whoever is on the booking, so the common edit —
+                changing the time, not the person — needs no search at all. */}
+            <ClientSearchSelect
+              value={client}
+              onChange={setClient}
+              name="customer_id"
+              required
+            />
 
             <div className="space-y-1.5">
               <Label>Services</Label>

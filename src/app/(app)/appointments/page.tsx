@@ -6,7 +6,6 @@ import { toDateInputValue } from "@/lib/format";
 import {
   getActiveTechs,
   getAppointments,
-  getCustomerOptions,
   getSalonDayBounds,
   getServiceMenu,
 } from "@/lib/queries";
@@ -35,9 +34,8 @@ export default async function AppointmentsPage({
   const prefillTime = at && /^\d{2}:\d{2}$/.test(at) ? at : undefined;
   const range = await getSalonDayBounds(selectedDate);
 
-  const [appointments, customers, techs, services] = await Promise.all([
+  const [appointments, techs, services] = await Promise.all([
     getAppointments(range),
-    getCustomerOptions(),
     getActiveTechs(),
     getServiceMenu(),
   ]);
@@ -56,7 +54,6 @@ export default async function AppointmentsPage({
         <BookingList
           selectedDate={selectedDate}
           appointments={appointments}
-          customers={customers}
           techs={techs}
           services={services}
           canManageFloor={session.canManageFloor}
@@ -69,7 +66,6 @@ export default async function AppointmentsPage({
             </CardHeader>
             <CardContent>
               <AppointmentForm
-                customers={customers}
                 techs={techs}
                 services={services}
                 defaultDate={selectedDate}

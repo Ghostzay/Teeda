@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { formatPhone, formatTime, toDateInputValue } from "@/lib/format";
-import type { AppointmentWithRelations, Customer, Profile, ServiceMenuItem } from "@/lib/types";
+import type { AppointmentWithRelations, Profile, ServiceMenuItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function shiftDays(dateStr: string, delta: number): string {
@@ -111,14 +111,12 @@ function DayStrip({
 export function BookingList({
   selectedDate,
   appointments,
-  customers,
   techs,
   services,
   canManageFloor,
 }: {
   selectedDate: string;
   appointments: AppointmentWithRelations[];
-  customers: Pick<Customer, "id" | "name" | "phone">[];
   techs: Profile[];
   services: ServiceMenuItem[];
   canManageFloor: boolean;
@@ -205,7 +203,6 @@ export function BookingList({
 
       <AppointmentSheet
         appointment={open}
-        customers={customers}
         techs={techs}
         services={services}
         canManageFloor={canManageFloor}

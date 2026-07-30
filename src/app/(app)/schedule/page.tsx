@@ -12,7 +12,6 @@ import { formatDate, toDateInputValue } from "@/lib/format";
 import {
   getActiveTechs,
   getAvailabilityPatterns,
-  getCustomerOptions,
   getDayCalendar,
   getMonthAvailability,
   getServiceMenu,
@@ -153,9 +152,8 @@ async function ScheduleContent({
   // The floor view. Everything it needs comes back in one call with every time
   // already resolved to salon-local minutes, so nothing below parses a date.
   if (view === "day") {
-    const [{ data, error }, customers, services] = await Promise.all([
+    const [{ data, error }, services] = await Promise.all([
       getDayCalendar(dateStr, session.canManageFloor ? null : session.userId),
-      session.canManageFloor ? getCustomerOptions() : Promise.resolve([]),
       session.canManageFloor ? getServiceMenu() : Promise.resolve([]),
     ]);
 
@@ -186,7 +184,6 @@ async function ScheduleContent({
               data={data}
               canManageFloor={session.canManageFloor}
               currentUserId={session.userId}
-              customers={customers}
               techs={allTechs}
               services={services}
             />
