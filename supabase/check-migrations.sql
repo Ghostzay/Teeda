@@ -68,6 +68,8 @@ from (
     (23, '20260728220000_add_kiosk_role.sql',
          'kiosk' = any (enum_range(null::public.user_role)::text[])),
     (24, '20260728230000_kiosk.sql',
-         to_regclass('public.kiosk_devices') is not null)
+         to_regclass('public.kiosk_devices') is not null),
+    (25, '20260728240000_kiosk_booking.sql',
+         to_regprocedure('public.kiosk_available_slots(uuid[], uuid, date)') is not null)
 ) as t (step, file, applied)
 order by step;

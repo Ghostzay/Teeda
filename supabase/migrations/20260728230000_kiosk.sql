@@ -357,6 +357,11 @@ begin
 
   v_result := jsonb_build_object(
     'result',       'found',
+    -- An opaque id, and only ever after a full ten-digit match. It is what
+    -- lets a known client book without re-registering; on its own it reveals
+    -- nothing, because the kiosk cannot read `customers` with it and
+    -- `kiosk_book` re-checks that it belongs to this salon.
+    'customer_id',  v_customer.id,
     'client_name',  public.mask_client_name(v_customer.name),
     'masked_phone', public.mask_phone(v_customer.phone)
   );

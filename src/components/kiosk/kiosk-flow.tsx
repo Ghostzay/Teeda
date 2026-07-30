@@ -1,10 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { AlertCircle, ArrowLeft, Check, Clock, Delete, UserRound } from "lucide-react";
 
+import {
+  KioskBooked,
+  KioskBookingFlow,
+  KioskRegister,
+  type BookingIdentity,
+} from "@/components/kiosk/kiosk-booking";
 import { kioskCheckin, kioskLookup } from "@/lib/actions/kiosk";
-import type { KioskCheckin, KioskLookup } from "@/lib/types";
+import type { KioskBooking, KioskCheckin, KioskLookup, KioskService } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /** Idle before "Still there?", and the countdown on that prompt. */
@@ -18,7 +24,9 @@ type Step =
   | { name: "keypad"; digits: string; busy: boolean }
   | { name: "result"; lookup: Extract<KioskLookup, { result: "found" }>; busy: boolean }
   | { name: "success"; tech: string | null; ahead: number }
-  | { name: "walkin"; reason: "no_appointment" | "no_match" }
+  | { name: "register"; phone: string }
+  | { name: "booking"; identity: BookingIdentity }
+  | { name: "booked"; booking: Extract<KioskBooking, { result: "booked" }> }
   | { name: "problem"; message: string };
 
 type State = { step: Step; misses: number };
@@ -31,6 +39,8 @@ type Action =
   | { type: "looked_up"; lookup: KioskLookup }
   | { type: "checked_in"; result: KioskCheckin }
   | { type: "back" }
+  | { type: "registered"; identity: BookingIdentity }
+  | { type: "booked"; booking: Extract<KioskBooking, { result: "booked" }> }
   | { type: "reset" };
 
 const IDLE: State = { step: { name: "idle" }, misses: 0 };
@@ -89,13 +99,25 @@ function reducer(state: State, action: Action): State {
         // Never let someone sit here probing numbers. After three, the screen
         // stops being a lookup and becomes a walk-in form.
         if (misses >= MAX_MISSES) {
-          return { step: { name: "walkin", reason: "no_match" }, misses };
+          // Not a punishment — the only honest next step. Somebody who has
+          // typed three numbers we do not know is a new client, or is guessing;
+          // either way registration is where they belong and neither of them
+          // learns anything more by trying a fourth.
+          return { step: { name: "register", phone: "" }, misses };
         }
         return { step: { name: "keypad", digits: "", busy: false }, misses };
       }
 
       if (lookup.state === "no_appointment") {
-        return { step: { name: "walkin", reason: "no_appointment" }, misses: 0 };
+        // A known client with nothing booked. Straight into booking, with the
+        // client already identified — no re-typing.
+        return {
+          step: {
+            name: "booking",
+            identity: { customerId: lookup.customer_id, displayName: lookup.client_name },
+          },
+          misses: 0,
+        };
       }
 
       return { step: { name: "result", lookup, busy: false }, misses: 0 };
@@ -120,6 +142,12 @@ function reducer(state: State, action: Action): State {
       };
     }
 
+    case "registered":
+      return { ...state, step: { name: "booking", identity: action.identity } };
+
+    case "booked":
+      return { ...state, step: { name: "booked", booking: action.booking } };
+
     case "back":
       return { ...state, step: { name: "keypad", digits: "", busy: false } };
 
@@ -132,15 +160,24 @@ function reducer(state: State, action: Action): State {
 export function KioskFlow({
   salonName,
   earlyMinutes,
+  services,
 }: {
   salonName: string;
   earlyMinutes: number;
   lateMinutes: number;
+  /** The bookable menu, read from the services table on the server. */
+  services: KioskService[];
 }) {
   const [state, dispatch] = useReducer(reducer, IDLE);
   const { step } = state;
+  // Kept so registration can prefill the number they already typed rather than
+  // asking for it twice.
+  const [lastDigits, setLastDigits] = useState("");
 
-  const reset = useCallback(() => dispatch({ type: "reset" }), []);
+  const reset = useCallback(() => {
+    setLastDigits("");
+    dispatch({ type: "reset" });
+  }, []);
   const idleWarning = useIdleReset(step.name !== "idle", reset);
 
   // Auto-lookup the instant the tenth digit lands: nobody should have to find
@@ -152,6 +189,7 @@ export function KioskFlow({
     if (digits.length !== 10 || busy) return;
     let cancelled = false;
     dispatch({ type: "busy" });
+    setLastDigits(digits);
     kioskLookup(digits).then((lookup) => {
       if (!cancelled) dispatch({ type: "looked_up", lookup });
     });
@@ -215,7 +253,24 @@ export function KioskFlow({
         <Success tech={step.tech} ahead={step.ahead} onDone={reset} />
       ) : null}
 
-      {step.name === "walkin" ? <Walkin reason={step.reason} onDone={reset} /> : null}
+      {step.name === "register" ? (
+        <KioskRegister
+          phone={step.phone || lastDigits}
+          onRegistered={(identity) => dispatch({ type: "registered", identity })}
+          onCancel={reset}
+        />
+      ) : null}
+
+      {step.name === "booking" ? (
+        <KioskBookingFlow
+          identity={step.identity}
+          services={services}
+          onDone={(booking) => dispatch({ type: "booked", booking })}
+          onCancel={reset}
+        />
+      ) : null}
+
+      {step.name === "booked" ? <KioskBooked booking={step.booking} onDone={reset} /> : null}
 
       {step.name === "problem" ? <Problem message={step.message} onDone={reset} /> : null}
     </>
@@ -417,34 +472,6 @@ function Success({
           : `${ahead} ${ahead === 1 ? "person is" : "people are"} ahead of you.`}
       </span>
       <span className="text-lg text-muted-text">Please take a seat · Mời ngồi</span>
-    </button>
-  );
-}
-
-/**
- * Walk-ins. A stub in this pass — the second pass turns this into a booking
- * flow. It exists now so that "no appointment" and "no match" already have
- * somewhere to land rather than a dead end.
- */
-function Walkin({ reason, onDone }: { reason: "no_appointment" | "no_match"; onDone: () => void }) {
-  useEffect(() => {
-    const timer = setTimeout(onDone, 15_000);
-    return () => clearTimeout(timer);
-  }, [onDone]);
-
-  return (
-    <button
-      type="button"
-      onClick={onDone}
-      className="flex flex-1 flex-col items-center justify-center gap-5 px-8 text-center"
-    >
-      <span className="text-[clamp(2.5rem,7vw,4rem)] font-semibold leading-none">
-        {reason === "no_appointment" ? "Nothing booked today" : "We'll get you set up"}
-      </span>
-      <span className="max-w-xl text-2xl text-secondary-text">
-        Please see the front desk and they&apos;ll take care of you.
-      </span>
-      <span className="text-lg text-muted-text">Vui lòng gặp quầy lễ tân</span>
     </button>
   );
 }

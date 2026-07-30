@@ -105,6 +105,7 @@ export type KioskLookup =
   | { result: "rate_limited" }
   | {
       result: "found";
+      customer_id: string;
       client_name: string;
       masked_phone: string;
       state: "no_appointment";
@@ -112,6 +113,7 @@ export type KioskLookup =
     }
   | {
       result: "found";
+      customer_id: string;
       client_name: string;
       masked_phone: string;
       state: "ready" | "too_early" | "too_late" | "already_checked_in" | "already_done";
@@ -124,6 +126,33 @@ export type KioskLookup =
         status: AppointmentStatus;
       };
     };
+
+/** One item on the kiosk's menu. Name, price and duration all come from the row. */
+export type KioskService = FunctionReturns<"kiosk_service_menu">[number];
+
+/** A tech who can take the chosen basket today, with their next opening. */
+export type KioskTechOption = FunctionReturns<"kiosk_available_techs">[number];
+
+/** A bookable start time. Computed only by `kiosk_available_slots` in SQL. */
+export type KioskSlot = FunctionReturns<"kiosk_available_slots">[number];
+
+/**
+ * The answer to a booking attempt.
+ *
+ * `taken` is the one that matters: two kiosks, or a kiosk and an admin, will
+ * collide, and the caller has to redraw the slot list rather than retry.
+ */
+export type KioskBooking =
+  | {
+      result: "booked";
+      appointment_id: string;
+      starts_at: string;
+      minutes: number;
+      services: string;
+      tech_name: string | null;
+      ahead: number;
+    }
+  | { result: "taken" | "invalid" | "no_services" | "invalid_basket" };
 
 export type KioskCheckin =
   | { result: "checked_in"; tech_name: string | null; ahead: number }

@@ -1,6 +1,6 @@
 import { KioskFlow } from "@/components/kiosk/kiosk-flow";
 import { requireKiosk } from "@/lib/auth";
-import { kioskContext } from "@/lib/actions/kiosk";
+import { kioskContext, kioskServices } from "@/lib/actions/kiosk";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +14,14 @@ export const dynamic = "force-dynamic";
  */
 export default async function KioskPage() {
   const session = await requireKiosk();
-  const context = await kioskContext();
+  const [context, services] = await Promise.all([kioskContext(), kioskServices()]);
 
   return (
     <KioskFlow
       salonName={context?.salon_name ?? session.salon.name}
       earlyMinutes={context?.early_minutes ?? 30}
       lateMinutes={context?.late_minutes ?? 20}
+      services={services}
     />
   );
 }

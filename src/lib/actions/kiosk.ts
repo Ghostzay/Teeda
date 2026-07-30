@@ -4,7 +4,16 @@ import { requireKiosk, requireManager } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import type { ActionState, KioskCheckin, KioskContext, KioskLookup } from "@/lib/types";
+import type {
+  ActionState,
+  KioskBooking,
+  KioskCheckin,
+  KioskContext,
+  KioskLookup,
+  KioskService,
+  KioskSlot,
+  KioskTechOption,
+} from "@/lib/types";
 
 /**
  * Everything the kiosk can do, as server actions.
@@ -178,4 +187,113 @@ export async function setKioskExitPin(
 
   revalidatePath("/settings");
   return { ok: true, message: "Kiosk PIN saved." };
+}
+
+// ---------------------------------------------------------------------------
+// Walk-in booking
+//
+// Every one of these is a thin pass-through to an RPC. That is the design, not
+// laziness: availability is computed in exactly one place — `kiosk_available_
+// slots` — and any arithmetic added here would be a second answer to the same
+// question, reachable from a device a customer is holding.
+// ---------------------------------------------------------------------------
+
+/** The bookable menu. Active services only, straight from the table. */
+export async function kioskServices(): Promise<KioskService[]> {
+  await requireKiosk();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("kiosk_service_menu");
+  if (error) return [];
+  return (data ?? []).map((row) => ({ ...row, price: Number(row.price) }));
+}
+
+/**
+ * Who can take this basket today, soonest first.
+ *
+ * Queried, not filtered: a tech who is not on shift, lacks a required skill, or
+ * has no remaining gap long enough never leaves the database.
+ */
+export async function kioskTechs(serviceIds: string[]): Promise<KioskTechOption[]> {
+  await requireKiosk();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("kiosk_available_techs", {
+    p_service_ids: serviceIds,
+    p_day: null,
+  });
+  if (error) return [];
+  return data ?? [];
+}
+
+/** Bookable start times. `techId` null means "first available". */
+export async function kioskSlots(
+  serviceIds: string[],
+  techId: string | null,
+): Promise<KioskSlot[]> {
+  await requireKiosk();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("kiosk_available_slots", {
+    p_service_ids: serviceIds,
+    p_tech_id: techId,
+    p_day: null,
+  });
+  if (error) return [];
+  return data ?? [];
+}
+
+/** Minimal registration. Five fields, and no way to reach an existing record. */
+export async function kioskRegister(fields: {
+  first: string;
+  last: string;
+  phone: string;
+  language: string;
+  sensitivities: string;
+}): Promise<{ id: string | null; error: string | null }> {
+  await requireKiosk();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("kiosk_register_client", {
+    p_first: fields.first,
+    p_last: fields.last,
+    p_phone: fields.phone,
+    p_language: fields.language,
+    p_sensitivities: fields.sensitivities || null,
+  });
+
+  if (error) return { id: null, error: error.message };
+  return { id: data as string, error: null };
+}
+
+/**
+ * Book it.
+ *
+ * The slot the tablet sends is a claim, not a fact: the RPC re-validates it
+ * inside the writing transaction, and the exclusion constraint on
+ * `schedule_blocks` settles anything that slips between. A `taken` result means
+ * somebody won the race and the caller must redraw the times — never retry.
+ */
+export async function kioskBook(args: {
+  customerId: string;
+  serviceIds: string[];
+  techId: string | null;
+  startsAt: string;
+}): Promise<KioskBooking> {
+  await requireKiosk();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("kiosk_book", {
+    p_customer_id: args.customerId,
+    p_service_ids: args.serviceIds,
+    p_tech_id: args.techId,
+    p_starts_at: args.startsAt,
+  });
+
+  if (error || !data) return { result: "taken" };
+
+  // A real appointment now exists, so every screen that draws the day is stale.
+  revalidatePath("/dashboard");
+  revalidatePath("/tech");
+  revalidatePath("/schedule");
+  revalidatePath("/appointments");
+
+  return data as KioskBooking;
 }

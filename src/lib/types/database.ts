@@ -172,6 +172,9 @@ export type Database = {
           preferred_tech_id: string | null;
           allergies: string | null;
           is_active: boolean;
+          first_name: string | null;
+          last_name: string | null;
+          language: string;
         };
         Insert: {
           id?: string;
@@ -185,6 +188,9 @@ export type Database = {
           preferred_tech_id?: string | null;
           allergies?: string | null;
           is_active?: boolean;
+          first_name?: string | null;
+          last_name?: string | null;
+          language?: string;
         };
         Update: {
           id?: string;
@@ -198,6 +204,9 @@ export type Database = {
           preferred_tech_id?: string | null;
           allergies?: string | null;
           is_active?: boolean;
+          first_name?: string | null;
+          last_name?: string | null;
+          language?: string;
         };
         Relationships: [
           {
@@ -1105,6 +1114,58 @@ export type Database = {
         Args: { p_appointment_id: string };
         // JSON; shape lives in `KioskCheckin` in lib/types.
         Returns: unknown;
+      };
+      kiosk_service_menu: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          name: string;
+          category: Database["public"]["Enums"]["service_category"];
+          price: number;
+          duration_minutes: number;
+          sort_order: number;
+        }[];
+      };
+      kiosk_available_techs: {
+        Args: { p_service_ids: string[]; p_day?: string | null };
+        Returns: {
+          tech_id: string;
+          full_name: string;
+          next_opening: string;
+          openings: number;
+        }[];
+      };
+      kiosk_available_slots: {
+        Args: { p_service_ids: string[]; p_tech_id?: string | null; p_day?: string | null };
+        Returns: { slot_at: string; tech_id: string; tech_name: string }[];
+      };
+      kiosk_register_client: {
+        Args: {
+          p_first: string;
+          p_last: string;
+          p_phone: string;
+          p_language?: string;
+          p_sensitivities?: string | null;
+        };
+        Returns: string;
+      };
+      kiosk_book: {
+        Args: {
+          p_customer_id: string;
+          p_service_ids: string[];
+          p_tech_id: string | null;
+          p_starts_at: string;
+        };
+        // JSON; shape lives in `KioskBooking` in lib/types.
+        Returns: unknown;
+      };
+      services_basket_is_valid: {
+        Args: { p_service_ids: string[] };
+        Returns: boolean;
+      };
+      services_total_minutes: {
+        Args: { p_service_ids: string[] };
+        Returns: number;
       };
       kiosk_check_exit_pin: {
         Args: { p_pin: string };
