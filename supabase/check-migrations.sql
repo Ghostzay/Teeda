@@ -72,6 +72,13 @@ from (
     (25, '20260728240000_kiosk_booking.sql',
          to_regprocedure('public.kiosk_available_slots(uuid[], uuid, date)') is not null),
     (26, '20260728250000_client_search.sql',
-         to_regprocedure('public.staff_search_clients(text, integer)') is not null)
+         to_regprocedure('public.staff_search_clients(text, integer)') is not null),
+    (27, '20260728260000_rotation_salon_clock.sql',
+         -- The fix lives inside a function body, so this checks for what the
+         -- new one calls rather than for the absence of the old one — the
+         -- migration explains the bug in a comment, and that comment contains
+         -- the very string an absence-check would look for.
+         pg_get_functiondef(to_regprocedure('public.turn_queue(uuid, public.skill[])'))
+           ~ 'salon_today')
 ) as t (step, file, applied)
 order by step;
