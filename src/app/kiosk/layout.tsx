@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 
-import { KioskShell } from "@/components/kiosk/kiosk-shell";
 import { requireKiosk } from "@/lib/auth";
-import { kioskContext } from "@/lib/actions/kiosk";
 
 export const dynamic = "force-dynamic";
 
@@ -22,28 +20,22 @@ export const viewport: Viewport = {
 };
 
 /**
- * The kiosk shell.
+ * The kiosk subtree: authorisation, and nothing else.
  *
  * `requireKiosk()` runs here, not only in the middleware. Middleware is a
- * redirect that runs on a matcher; this runs on the render path, so there is
- * no route into this subtree that skips it. Any other role that reaches /kiosk
- * is sent back to its own home before a single child renders.
+ * redirect that runs on a matcher; this runs on the render path, so there is no
+ * route into this subtree that skips it. Any other role that reaches /kiosk is
+ * sent back to its own home before a single child renders.
  *
- * Nothing from the app shell is imported: no nav, no sidebar, no user menu, no
- * sign-out. Not hidden with CSS — absent. A customer holding the tablet cannot
- * reach what was never rendered.
+ * The customer-facing chrome used to live here too, which meant the lobby at
+ * /kiosk/home inherited it — including the hidden exit hatch, on the very
+ * screen you reach by using that hatch. It now belongs to /kiosk, the only
+ * screen that wants it.
+ *
+ * Nothing from the app shell is imported anywhere under here: no nav, no
+ * sidebar, no user menu. Not hidden with CSS — absent.
  */
 export default async function KioskLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireKiosk();
-  const context = await kioskContext();
-
-  return (
-    <KioskShell
-      salonName={context?.salon_name ?? session.salon.name}
-      deviceLabel={context?.device_label ?? "Kiosk"}
-      hasExitPin={context?.has_exit_pin ?? false}
-    >
-      {children}
-    </KioskShell>
-  );
+  await requireKiosk();
+  return <>{children}</>;
 }

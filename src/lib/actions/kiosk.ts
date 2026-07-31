@@ -2,10 +2,10 @@
 
 import { requireKiosk, requireManager } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import type {
   ActionState,
+  KioskAccount,
   KioskBooking,
   KioskCheckin,
   KioskContext,
@@ -85,68 +85,33 @@ export async function kioskSignOut(): Promise<void> {
   await supabase.auth.signOut();
 }
 
+/**
+ * The kiosk account itself, for the lobby.
+ *
+ * Distinct from `kioskContext()`, which deliberately returns nothing for a
+ * switched-off device — the lobby needs to *say* the tablet is switched off,
+ * and it cannot do that from a null.
+ */
+export async function kioskAccount(): Promise<KioskAccount | null> {
+  await requireKiosk();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("kiosk_account");
+  if (error || !data) return null;
+  return data as KioskAccount;
+}
+
 // ---------------------------------------------------------------------------
 // Manager side
 // ---------------------------------------------------------------------------
 
-/**
- * Register a tablet.
- *
- * Two steps that must both land: an auth user (service role, no email
- * confirmation — a device has no inbox) and the profile + device rows. The RPC
- * does the second half in one statement so a half-made kiosk — an auth user
- * with no profile, which would sit in a redirect loop forever — cannot exist.
+/*
+ * `addKioskDevice()` lived here. It made an auth user with a synthetic
+ * `@device.invalid` address, which meant a kiosk was provisioned rather than
+ * employed — a second, parallel way to create an account. A kiosk is now a
+ * staff account like any other: made on the Team page with a real email and a
+ * role of Kiosk, and a trigger on `profiles` creates the device row whichever
+ * route the account arrives by.
  */
-export async function addKioskDevice(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const session = await requireManager();
-
-  const label = String(formData.get("label") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-
-  if (!label) return { ok: false, error: "Give the device a name, like “Front desk iPad”." };
-  if (password.length < 12) {
-    return { ok: false, error: "Use a device passphrase of at least 12 characters." };
-  }
-
-  const admin = createAdminClient();
-
-  // A device has no mailbox, so the address is synthetic and confirmed on
-  // creation. It is a credential, not a contact.
-  const email = `kiosk-${crypto.randomUUID()}@device.invalid`;
-
-  const { data: created, error: createError } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    app_metadata: { salon_id: session.salon.id, kiosk: true },
-  });
-
-  if (createError || !created.user) {
-    return { ok: false, error: createError?.message ?? "Couldn't create the device account." };
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("register_kiosk_device", {
-    p_user_id: created.user.id,
-    p_label: label,
-  });
-
-  if (error) {
-    // Roll the auth user back rather than leaving an orphan that can sign in
-    // with no profile and no restrictive policy applying to it.
-    await admin.auth.admin.deleteUser(created.user.id);
-    return { ok: false, error: error.message };
-  }
-
-  revalidatePath("/settings");
-  return {
-    ok: true,
-    message: `“${label}” is ready. Sign in on the tablet with ${email}.`,
-  };
-}
 
 /** Switch a device off. Takes effect on its very next request. */
 export async function setKioskDeviceActive(

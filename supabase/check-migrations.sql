@@ -79,6 +79,8 @@ from (
          -- migration explains the bug in a comment, and that comment contains
          -- the very string an absence-check would look for.
          pg_get_functiondef(to_regprocedure('public.turn_queue(uuid, public.skill[])'))
-           ~ 'salon_today')
+           ~ 'salon_today'),
+    (28, '20260728270000_kiosk_accounts.sql',
+         to_regprocedure('public.kiosk_account()') is not null)
 ) as t (step, file, applied)
 order by step;

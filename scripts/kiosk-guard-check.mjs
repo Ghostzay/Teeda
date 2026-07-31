@@ -60,17 +60,24 @@ if (/if \(session\.isKiosk\) redirect\("\/kiosk"\)/.test(auth)) {
 const nav = readFileSync("src/lib/navigation.ts", "utf8");
 if (/role === "kiosk"\) return \[\]/.test(nav)) ok("navForRole gives a kiosk no links");
 else bad("navForRole", "a kiosk must not fall through to the tech menu");
-if (/role === "kiosk"\) return "\/kiosk"/.test(nav)) ok("homeForRole sends a kiosk to /kiosk");
+// Any /kiosk route is fine — it is the lobby now, not the customer screen.
+if (/role === "kiosk"\) return "\/kiosk/.test(nav)) ok("homeForRole sends a kiosk into /kiosk");
 else bad("homeForRole", "a kiosk must not default to /dashboard");
 
 console.log("\nThe kiosk reads no table directly:");
 const actions = readFileSync("src/lib/actions/kiosk.ts", "utf8");
-// Strip comments first. Prose *about* not calling `.from("customers")` is not
-// a call to it, and matching it made this check fail on its own documentation.
-const withoutComments = actions
+// Split on the divider FIRST, then strip comments. The divider is itself a
+// line comment, so stripping first deleted the very marker this relies on.
+const MARKER = "// Manager side";
+const cut = actions.indexOf(MARKER);
+if (cut === -1) bad("kiosk actions", `missing the "${MARKER}" divider this check relies on`);
+
+// Prose *about* not calling `.from("customers")` is not a call to it, and
+// matching it made this check fail on its own documentation.
+const withoutComments = (cut === -1 ? actions : actions.slice(0, cut))
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .replace(/^\s*\/\/.*$/gm, "");
-const kioskOnly = withoutComments.slice(0, withoutComments.indexOf("export async function addKioskDevice"));
+const kioskOnly = withoutComments;
 const tables = [...kioskOnly.matchAll(/\.from\(["']([a-z_]+)["']\)/g)].map((m) => m[1]);
 if (tables.length === 0) ok("no .from() in any kiosk-facing action");
 else bad("kiosk actions", `direct table access: ${tables.join(", ")}`);

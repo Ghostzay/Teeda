@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WifiOff } from "lucide-react";
 
-import { kioskSignOut, kioskVerifyExitPin } from "@/lib/actions/kiosk";
+import { kioskVerifyExitPin } from "@/lib/actions/kiosk";
 import { cn } from "@/lib/utils";
 
 /**
@@ -104,8 +104,10 @@ function ExitHatch({ salonName, enabled }: { salonName: string; enabled: boolean
     setWrong(false);
     const ok = await kioskVerifyExitPin(pin);
     if (ok) {
-      await kioskSignOut();
-      router.replace("/login");
+      // Back to the lobby, still signed in. Signing out here would mean
+      // re-typing the account password to restart the tablet, which is the
+      // thing a PIN exists to avoid.
+      router.replace("/kiosk/home");
       return;
     }
     setWrong(true);
@@ -128,6 +130,7 @@ function ExitHatch({ salonName, enabled }: { salonName: string; enabled: boolean
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-canvas/95 p-8">
           <div className="w-full max-w-sm space-y-4 rounded-2xl border border-subtle bg-surface-raised p-6">
             <p className="text-title">Manager PIN</p>
+            <p className="text-sm text-muted-text">Leaves kiosk mode on this tablet.</p>
             <input
               type="password"
               inputMode="numeric"
@@ -160,7 +163,7 @@ function ExitHatch({ salonName, enabled }: { salonName: string; enabled: boolean
                     : "bg-accent-default text-on-accent",
                 )}
               >
-                {busy ? "Checking…" : "Sign out"}
+                {busy ? "Checking…" : "Exit kiosk"}
               </button>
             </div>
           </div>

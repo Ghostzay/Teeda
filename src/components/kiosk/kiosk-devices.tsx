@@ -1,17 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Plus, Tablet } from "lucide-react";
+import Link from "next/link";
+import { Tablet } from "lucide-react";
 
 import { ActionButton } from "@/components/action-button";
 import { ActionForm } from "@/components/action-form";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { addKioskDevice, setKioskDeviceActive, setKioskExitPin } from "@/lib/actions/kiosk";
+import { setKioskDeviceActive, setKioskExitPin } from "@/lib/actions/kiosk";
 import { formatDate } from "@/lib/format";
 import type { KioskDevice } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -31,71 +29,27 @@ export function KioskDevices({
   devices: KioskDevice[];
   hasExitPin: boolean;
 }) {
-  const router = useRouter();
-  const [adding, setAdding] = useState(false);
-
   return (
     <Card>
-      <CardHeader className="flex-row items-start justify-between gap-3 space-y-0 pb-3">
-        <div>
-          <CardTitle className="flex items-center gap-2">
-            <Tablet className="size-4 text-accent-default" />
-            Check-in tablets ({devices.length})
-          </CardTitle>
-          <CardDescription>
-            A tablet clients use to check themselves in. It can look someone up by their full
-            phone number and check them in — nothing else. It cannot see your client list, your
-            calendar or any money.
-          </CardDescription>
-        </div>
-        <Button type="button" size="lg" onClick={() => setAdding((value) => !value)}>
-          <Plus className="size-4" />
-          Add tablet
-        </Button>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <Tablet className="size-4 text-accent-default" />
+          Check-in tablets ({devices.length})
+        </CardTitle>
+        <CardDescription>
+          A tablet clients use to check themselves in and book. It can look
+          someone up by their full phone number — nothing else. It cannot see
+          your client list, your calendar or any money.
+          {" "}
+          <Link href="/staff" className="font-medium text-accent-default underline">
+            Add one on the Team page
+          </Link>{" "}
+          by creating a staff account with the role set to Kiosk device. Name it
+          after where it sits — that name is what the tablet shows.
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {adding ? (
-          <ActionForm
-            action={addKioskDevice}
-            onSuccess={() => {
-              setAdding(false);
-              router.refresh();
-            }}
-            className="space-y-3 rounded-xl border border-subtle bg-surface-sunken p-4"
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="kiosk_label">Where is it?</Label>
-              <Input
-                id="kiosk_label"
-                name="label"
-                placeholder="Front desk iPad"
-                required
-                autoComplete="off"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="kiosk_password">Device passphrase</Label>
-              <Input
-                id="kiosk_password"
-                name="password"
-                type="password"
-                minLength={12}
-                placeholder="At least 12 characters"
-                required
-                autoComplete="new-password"
-              />
-              <p className="text-meta text-muted-text">
-                You type this on the tablet once. It then stays signed in — write it down
-                somewhere the staff can find it, not on the tablet.
-              </p>
-            </div>
-            <SubmitButton size="lg" className="w-full">
-              Create the device account
-            </SubmitButton>
-          </ActionForm>
-        ) : null}
-
         {devices.length === 0 ? (
           <p className="rounded-xl border border-subtle bg-surface-sunken px-4 py-6 text-center text-sm text-muted-text">
             No tablets yet.
@@ -153,8 +107,9 @@ export function KioskDevices({
             <SubmitButton>Save</SubmitButton>
           </div>
           <p className="text-meta text-muted-text">
-            Five taps on the salon name at the top of the kiosk, then this PIN, signs the tablet
-            out. Without a PIN set there is no way out of the kiosk on the device itself.
+            Five taps on the salon name at the top of the kiosk, then this PIN, leaves kiosk
+            mode and hands the tablet back — it stays signed in, so starting again is one tap.
+            Without a PIN there is no way out of kiosk mode on the device itself.
           </p>
         </ActionForm>
       </CardContent>

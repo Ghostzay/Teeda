@@ -135,7 +135,9 @@ export function homeForRole(role: UserRole): string {
   // Named cases, not "everything that isn't a tech". The default branch is
   // where a new role silently lands, and for a kiosk that default was the
   // dashboard — the one screen it exists to never show.
-  if (role === "kiosk") return "/kiosk";
+  // The lobby, not the customer-facing screen: signing in should make you
+  // staff holding a tablet, not a tablet.
+  if (role === "kiosk") return "/kiosk/home";
   if (role === "tech") return "/tech";
   return "/dashboard";
 }

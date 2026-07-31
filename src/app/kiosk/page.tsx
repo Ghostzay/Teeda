@@ -1,4 +1,5 @@
 import { KioskFlow } from "@/components/kiosk/kiosk-flow";
+import { KioskShell } from "@/components/kiosk/kiosk-shell";
 import { requireKiosk } from "@/lib/auth";
 import { kioskContext, kioskServices } from "@/lib/actions/kiosk";
 
@@ -17,11 +18,17 @@ export default async function KioskPage() {
   const [context, services] = await Promise.all([kioskContext(), kioskServices()]);
 
   return (
-    <KioskFlow
+    <KioskShell
+      salonName={context?.salon_name ?? session.salon.name}
+      deviceLabel={context?.device_label ?? "Kiosk"}
+      hasExitPin={context?.has_exit_pin ?? false}
+    >
+      <KioskFlow
       salonName={context?.salon_name ?? session.salon.name}
       earlyMinutes={context?.early_minutes ?? 30}
       lateMinutes={context?.late_minutes ?? 20}
-      services={services}
-    />
+        services={services}
+      />
+    </KioskShell>
   );
 }

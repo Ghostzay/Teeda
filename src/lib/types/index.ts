@@ -93,6 +93,15 @@ export type AppointmentService = Tables<"appointment_services">;
  */
 export type KioskDevice = Tables<"kiosk_devices">;
 
+/** What the kiosk lobby shows before kiosk mode starts. */
+export type KioskAccount = {
+  salon_name: string;
+  device_label: string;
+  is_active: boolean;
+  has_device: boolean;
+  has_exit_pin: boolean;
+};
+
 /** What the idle screen needs. No client data, so no rate limit on it. */
 export type KioskContext = {
   salon_name: string;

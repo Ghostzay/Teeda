@@ -1100,6 +1100,11 @@ export type Database = {
         Args: { p_appointment_id: string };
         Returns: number;
       };
+      kiosk_account: {
+        Args: Record<string, never>;
+        // JSON; shape lives in `KioskAccount` in lib/types.
+        Returns: unknown;
+      };
       kiosk_context: {
         Args: Record<string, never>;
         // JSON; shape lives in `KioskContext` in lib/types.
