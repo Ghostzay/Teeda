@@ -27,8 +27,23 @@ function walk(dir, out = []) {
   return out;
 }
 
+/** Every source file, not only route entry points. */
+function walkAll(dir, out = []) {
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) walkAll(full, out);
+    else if (/\.tsx?$/.test(entry)) out.push(full);
+  }
+  return out;
+}
+
 console.log("Every staff route entry point calls a server guard:");
-const PUBLIC = ["src/app/login", "src/app/auth", "src/app/kiosk"];
+// Trailing slashes on purpose. Bare "src/app/kiosk" also prefix-matches
+// "src/app/kiosk-stalled", and any future /kiosk-something would inherit an
+// exemption nobody chose to give it. The stalled screen is listed by name
+// because it genuinely is public — it is the screen for a device with no
+// session left to guard.
+const PUBLIC = ["src/app/login/", "src/app/auth/", "src/app/kiosk/", "src/app/kiosk-stalled/"];
 for (const file of walk("src/app")) {
   if (PUBLIC.some((p) => file.startsWith(p))) continue;
   if (file === "src/app/layout.tsx") continue; // root shell, renders no data
@@ -81,6 +96,36 @@ const kioskOnly = withoutComments;
 const tables = [...kioskOnly.matchAll(/\.from\(["']([a-z_]+)["']\)/g)].map((m) => m[1]);
 if (tables.length === 0) ok("no .from() in any kiosk-facing action");
 else bad("kiosk actions", `direct table access: ${tables.join(", ")}`);
+
+console.log("\nOnly a kiosk account can start kiosk mode:");
+const modeActions = readFileSync("src/lib/actions/kiosk-mode.ts", "utf8");
+// The gate is on `realRole`, not `role`. `role` is already the downgraded one,
+// so checking it would be checking the flag against itself.
+if (/session\.realRole !== "kiosk"/.test(modeActions)) {
+  ok("startKioskMode refuses every non-kiosk role, server-side");
+} else bad("startKioskMode", 'must check session.realRole !== "kiosk" before issuing the cookie');
+
+if (/rpc\("salon_has_exit_pin"\)/.test(modeActions)) {
+  ok("startKioskMode refuses to lock a device with no exit PIN");
+} else bad("startKioskMode", "must confirm salon_has_exit_pin() before locking a device");
+
+// The point of removing it: a control that turns a staff account into a locked
+// tablet is a control that locks people out of their own account.
+const componentFiles = walkAll("src/components").concat(walkAll("src/app"));
+const offenders = componentFiles.filter(
+  (f) => !f.startsWith("src/app/kiosk/") &&
+    !f.startsWith("src/components/kiosk/") &&
+    /startKioskMode|StartKioskModeButton/.test(readFileSync(f, "utf8")),
+);
+if (offenders.length === 0) ok("no 'Start kiosk mode' control outside /kiosk");
+else bad("start kiosk mode", `reachable from: ${offenders.join(", ")}`);
+
+console.log("\nA dead session shows the branded screen, never a login form:");
+if (/kiosk-stalled/.test(readFileSync("src/lib/supabase/middleware.ts", "utf8"))) {
+  ok("middleware routes a sessionless kiosk to /kiosk-stalled");
+} else bad("middleware", "a kiosk with no session must not be sent to /login");
+if (/kiosk-stalled/.test(auth)) ok("requireKiosk agrees with the middleware");
+else bad("requireKiosk", "must send a sessionless kiosk to /kiosk-stalled too");
 
 console.log("\nThe kiosk shell renders no app chrome:");
 const shell = readFileSync("src/components/kiosk/kiosk-shell.tsx", "utf8");

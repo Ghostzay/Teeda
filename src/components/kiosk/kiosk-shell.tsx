@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WifiOff } from "lucide-react";
 
-import { exitKioskMode } from "@/lib/actions/kiosk-mode";
+import { useTapGesture } from "@/components/kiosk/use-tap-gesture";
+import { exitKioskMode, refreshKioskSession } from "@/lib/actions/kiosk-mode";
 import { cn } from "@/lib/utils";
 
 /**
@@ -26,6 +27,7 @@ export function KioskShell({
   children: React.ReactNode;
 }) {
   const online = useOnline();
+  useSessionKeeper();
 
   return (
     <div
@@ -73,30 +75,13 @@ export function KioskShell({
  */
 function ExitHatch({ salonName }: { salonName: string }) {
   const router = useRouter();
-  const [taps, setTaps] = useState(0);
   const [asking, setAsking] = useState(false);
   const [pin, setPin] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Five taps within three seconds. The window has to be short enough that a
-  // curious customer poking the screen does not stumble into it, and long
-  // enough that a person deliberately tapping five times makes it.
-  useEffect(() => {
-    if (taps === 0) return;
-    const timer = setTimeout(() => setTaps(0), 3000);
-    return () => clearTimeout(timer);
-  }, [taps]);
-
-  const tap = () => {
-    setTaps((count) => {
-      if (count + 1 >= 5) {
-        setAsking(true);
-        return 0;
-      }
-      return count + 1;
-    });
-  };
+  // Three seconds from the first tap, not from the last. See use-tap-gesture.
+  const tap = useTapGesture(useCallback(() => setAsking(true), []));
 
   const submit = async () => {
     setBusy(true);
@@ -145,7 +130,7 @@ function ExitHatch({ salonName }: { salonName: string }) {
               inputMode="numeric"
               autoFocus
               value={pin}
-              onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 8))}
+              onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
               className="w-full rounded-xl border border-subtle bg-surface-sunken px-4 py-3 text-center text-2xl tracking-[0.5em] text-primary-text"
             />
             {message ? <p className="text-sm text-danger">{message}</p> : null}
@@ -180,6 +165,48 @@ function ExitHatch({ salonName }: { salonName: string }) {
       ) : null}
     </>
   );
+}
+
+/**
+ * Rotate the auth token on a device that never navigates.
+ *
+ * The middleware refreshes the session on every request, which covers the whole
+ * app except the one screen that makes no requests: a tablet left on the idle
+ * greeting for a week. Its refresh token quietly expires, and the next customer
+ * to touch it gets bounced to a login form.
+ *
+ * Ten minutes is well inside Supabase's default one-hour access token, so a
+ * missed beat or two changes nothing. Also fires when the tablet wakes or the
+ * network returns — the two moments a device is most likely to be holding a
+ * token that expired while it was asleep.
+ *
+ * If the session cannot be recovered, this does not retry into a login form; it
+ * routes to the branded stalled screen, which keeps trying on its own.
+ */
+function useSessionKeeper() {
+  const router = useRouter();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const beat = async () => {
+      if (document.visibilityState === "hidden") return;
+      const alive = await refreshKioskSession();
+      if (!alive && !cancelled) router.replace("/kiosk-stalled");
+    };
+
+    const timer = setInterval(beat, 10 * 60 * 1000);
+    const onWake = () => void beat();
+    document.addEventListener("visibilitychange", onWake);
+    window.addEventListener("online", onWake);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onWake);
+      window.removeEventListener("online", onWake);
+    };
+  }, [router]);
 }
 
 /** Online/offline, so the screen can say so instead of going white. */

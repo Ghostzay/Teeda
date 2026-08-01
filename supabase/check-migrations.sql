@@ -83,6 +83,14 @@ from (
     (28, '20260728270000_kiosk_accounts.sql',
          to_regprocedure('public.kiosk_account()') is not null),
     (29, '20260728280000_kiosk_mode.sql',
-         to_regclass('public.kiosk_pin_attempts') is not null)
+         to_regclass('public.kiosk_pin_attempts') is not null),
+    (30, '20260728290000_pgcrypto_search_path.sql',
+         -- This one is the difference between a PIN that saves and one that
+         -- raises 42883, and it lives entirely in a function's search_path.
+         -- `salon_has_exit_pin` is new in the same file, so its existence is
+         -- the cheap proxy; the search_path check is the one that matters.
+         to_regprocedure('public.salon_has_exit_pin()') is not null
+         and pg_get_functiondef(to_regprocedure('public.set_kiosk_exit_pin(text)'))
+               ~ 'search_path.*extensions')
 ) as t (step, file, applied)
 order by step;

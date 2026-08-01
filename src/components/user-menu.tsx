@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogOut } from "lucide-react";
 
 import { AnimatePresence, motion } from "@/components/motion";
-import { StartKioskModeButton } from "@/components/kiosk/start-kiosk-mode";
 import { AppearanceMenu } from "@/components/theme-picker";
 import { Button } from "@/components/ui/button";
 import { initials } from "@/lib/format";
@@ -14,20 +13,24 @@ import { initials } from "@/lib/format";
  *
  * Appearance lives here rather than only in Settings because a tech on a
  * shared tablet needs to change it without permission to open Settings at all.
+ *
+ * There is deliberately no "Start kiosk mode" here. Kiosk mode is something a
+ * kiosk account starts on its own sign-in screen, and nothing else can start at
+ * all. A control that turns your own account into a locked tablet is a control
+ * that locks people out of their own account — one mis-tap from a manager, on a
+ * phone with no PIN to hand, and the way back is a support call. Removing it is
+ * the feature.
  */
 export function UserMenu({
   name,
   role,
   salon,
   signOut,
-  hasExitPin,
 }: {
   name: string;
   role: string;
   salon: string;
   signOut: () => Promise<void>;
-  /** Drives the warning on the confirm dialog when no PIN has been set. */
-  hasExitPin: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const container = useRef<HTMLDivElement>(null);
@@ -88,15 +91,7 @@ export function UserMenu({
 
             <AppearanceMenu />
 
-            {/* Any signed-in role can lock this device. The tablet by the door
-                is often somebody's own phone or a shared iPad already signed in
-                as a manager — asking them to sign out and back in as a kiosk
-                account is how it ends up not being used at all. */}
-            <div className="mt-3 border-t border-subtle pt-3">
-              <StartKioskModeButton hasExitPin={hasExitPin} />
-            </div>
-
-            <form action={signOut} className="mt-1 border-t border-subtle pt-3">
+            <form action={signOut} className="mt-3 border-t border-subtle pt-3">
               <Button variant="ghost" type="submit" className="w-full justify-start">
                 <LogOut className="size-4" />
                 Sign out

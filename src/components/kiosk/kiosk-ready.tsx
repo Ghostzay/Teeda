@@ -68,7 +68,7 @@ export function KioskReady({
 
       <button
         type="button"
-        disabled={!isActive || busy}
+        disabled={!isActive || !hasExitPin || busy}
         onClick={() => setConfirming(true)}
         className="flex min-h-[96px] items-center gap-4 rounded-3xl bg-accent-default px-12 text-3xl font-semibold text-on-accent disabled:bg-surface-overlay disabled:text-muted-text"
       >
@@ -126,9 +126,10 @@ export function ExitSteps({ hasExitPin }: { hasExitPin: boolean }) {
         </ol>
       ) : (
         <p className="text-danger">
-          Starting now will lock this device to the customer screen with no way
-          out on the device itself. Ask a manager to set a PIN in Settings →
-          Check-in tablets first.
+          Kiosk mode cannot start until a manager sets one, in Settings →
+          Check-in tablets. Without a PIN there is no way off this screen once
+          it locks, so the server refuses to start it — this is not something
+          the tablet can be talked into.
         </p>
       )}
     </div>

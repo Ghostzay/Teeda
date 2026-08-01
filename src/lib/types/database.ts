@@ -1115,6 +1115,12 @@ export type Database = {
         Args: { p_entered: boolean };
         Returns: undefined;
       };
+      // One bit, so the hash never leaves the database to answer a question the
+      // UI only needs a boolean for.
+      salon_has_exit_pin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
       kiosk_touch_sign_in: {
         Args: Record<string, never>;
         Returns: undefined;

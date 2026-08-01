@@ -5,9 +5,15 @@
  */
 process.env.SUPABASE_SERVICE_ROLE_KEY ||= "test-secret-not-a-real-key";
 
-const { issueKioskMode, readKioskMode, clearKioskModeCookie, KIOSK_COOKIE } = await import(
-  new URL("../src/lib/kiosk-mode.ts", import.meta.url).href
-);
+const {
+  issueKioskMode,
+  readKioskMode,
+  clearKioskModeCookie,
+  kioskBrandCookie,
+  readKioskBrand,
+  KIOSK_COOKIE,
+  KIOSK_BRAND_COOKIE,
+} = await import(new URL("../src/lib/kiosk-mode.ts", import.meta.url).href);
 
 let passed = 0, failed = 0;
 const check = async (name, actual, expected) => {
@@ -59,10 +65,32 @@ const reissued = await issueKioskMode(ALICE, "device-1");
 await check("re-issuing keeps the device key (lockout follows the device)",
   (await readKioskMode(reissued.value, ALICE))?.deviceKey, "device-1");
 
+// Leaving kiosk mode has to clear the branding too. Leave it behind and the
+// next stall on that device shows the previous salon's name.
 const cleared = clearKioskModeCookie();
-await check("clearing targets the right cookie", cleared.name, KIOSK_COOKIE);
-await check("clearing expires it immediately", cleared.options.maxAge, 0);
-await check("clearing stays httpOnly", cleared.options.httpOnly, true);
+await check("clearing targets both cookies",
+  cleared.map((c) => c.name).sort(), [KIOSK_BRAND_COOKIE, KIOSK_COOKIE].sort());
+await check("clearing expires them immediately",
+  cleared.every((c) => c.options.maxAge === 0), true);
+await check("clearing stays httpOnly",
+  cleared.every((c) => c.options.httpOnly === true), true);
+
+// --- the branding cache -----------------------------------------------------
+//
+// Display text only. It is never trusted for a decision, but it does have to
+// survive a round trip: a salon called "Nails | Co" must not lose its device
+// label to the separator.
+const brand = kioskBrandCookie({ salonName: "Nails & Co", deviceLabel: "Front desk" });
+await check("branding round-trips", readKioskBrand(brand.value),
+  { salonName: "Nails & Co", deviceLabel: "Front desk" });
+await check("branding is httpOnly", brand.options.httpOnly, true);
+
+const piped = kioskBrandCookie({ salonName: "Nails | Co", deviceLabel: "Desk | 2" });
+await check("a pipe in the name cannot split the value", readKioskBrand(piped.value),
+  { salonName: "Nails   Co", deviceLabel: "Desk   2" });
+
+await check("no branding cookie is not half a brand", readKioskBrand(undefined), null);
+await check("a truncated branding cookie is rejected", readKioskBrand("OnlyASalon"), null);
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

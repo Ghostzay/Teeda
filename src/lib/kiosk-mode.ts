@@ -40,6 +40,45 @@
 
 export const KIOSK_COOKIE = "teeda_kiosk";
 
+/**
+ * The two strings the stalled screen needs, cached where they survive the
+ * session that produced them.
+ *
+ * When a tablet's refresh token finally dies, there is no session left to ask
+ * "which salon is this?" — and the alternative to remembering is a grey screen
+ * that says nothing, on a device mounted in somebody's reception. Both values
+ * are already printed in 3rem type on the front of the tablet, so caching them
+ * discloses nothing; httpOnly anyway, because there is no reason for the page
+ * to write its own branding.
+ */
+export const KIOSK_BRAND_COOKIE = "teeda_kiosk_brand";
+
+export type KioskBrand = { salonName: string; deviceLabel: string };
+
+/** Pack the branding into one cookie value. `|` is stripped, so it can split. */
+export function kioskBrandCookie(brand: KioskBrand) {
+  const clean = (value: string) => value.replace(/\|/g, " ").slice(0, 120);
+  return {
+    name: KIOSK_BRAND_COOKIE,
+    value: encodeURIComponent(`${clean(brand.salonName)}|${clean(brand.deviceLabel)}`),
+    options: {
+      httpOnly: true as const,
+      sameSite: "lax" as const,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: MAX_AGE_SECONDS,
+    },
+  };
+}
+
+/** Unpack it. Returns null rather than half a brand. */
+export function readKioskBrand(raw: string | undefined): KioskBrand | null {
+  if (!raw) return null;
+  const [salonName, deviceLabel] = decodeURIComponent(raw).split("|");
+  if (!salonName || !deviceLabel) return null;
+  return { salonName, deviceLabel };
+}
+
 /** A year. It has to survive a device reboot; a shift is not long enough. */
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
@@ -163,17 +202,17 @@ export async function readKioskMode(
   return { deviceKey, userId: signedUserId };
 }
 
-/** The cookie that clears kiosk mode. Same attributes, zero lifetime. */
+/** The cookies that clear kiosk mode. Same attributes, zero lifetime. */
 export function clearKioskModeCookie() {
-  return {
-    name: KIOSK_COOKIE,
-    value: "",
-    options: {
-      httpOnly: true as const,
-      sameSite: "lax" as const,
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 0,
-    },
+  const expired = {
+    httpOnly: true as const,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 0,
   };
+  return [
+    { name: KIOSK_COOKIE, value: "", options: expired },
+    { name: KIOSK_BRAND_COOKIE, value: "", options: expired },
+  ];
 }

@@ -145,8 +145,14 @@ export async function setKioskExitPin(
   await requireManager();
   const supabase = await createClient();
 
+  // 4 to 6 digits, matching `set_kiosk_exit_pin` exactly. They disagreed before
+  // — this accepted 8 and the RPC rejected it — so a 7-digit PIN passed the
+  // form and came back as a raw Postgres error.
+  //
+  // Kept as text throughout. "0042" is a valid PIN; parse it as a number
+  // anywhere along the way and it becomes 42, a PIN nobody can ever enter.
   const pin = String(formData.get("pin") ?? "").trim();
-  if (!/^\d{4,8}$/.test(pin)) return { ok: false, error: "The PIN must be 4 to 8 digits." };
+  if (!/^\d{4,6}$/.test(pin)) return { ok: false, error: "The PIN must be 4 to 6 digits." };
 
   const { error } = await supabase.rpc("set_kiosk_exit_pin", { p_pin: pin });
   if (error) return { ok: false, error: error.message };

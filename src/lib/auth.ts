@@ -135,7 +135,14 @@ export async function requireKiosk(): Promise<SessionContext> {
   // Deliberately `getSessionContext`, not `requireSession` — that one bounces
   // kiosks to /kiosk, which from inside /kiosk is a redirect loop.
   const session = await getSessionContext();
-  if (!session) redirect("/login");
+  if (!session) {
+    // A tablet that has lost its session gets the branded screen, not a login
+    // form. The middleware makes the same call earlier; this is the copy that
+    // cannot be skipped by a route the matcher misses, and the two must agree
+    // — otherwise the miss is exactly the case that shows a customer a form.
+    const inKioskMode = (await cookies()).get(KIOSK_COOKIE) !== undefined;
+    redirect(inKioskMode ? "/kiosk-stalled" : "/login");
+  }
   if (!session.isKiosk) redirect(homeForRole(session.role));
   return session;
 }

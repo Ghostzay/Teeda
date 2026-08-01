@@ -121,14 +121,14 @@ export function KioskDevices({
               id="kiosk_pin"
               name="pin"
               inputMode="numeric"
-              placeholder="4 to 8 digits"
+              placeholder="4 to 6 digits"
               autoComplete="off"
             />
             <SubmitButton>Save</SubmitButton>
           </div>
           <p className="text-meta text-muted-text">
-            Five wrong tries locks that tablet out for five minutes. Without a PIN set there is
-            no way out of kiosk mode on the device itself — set one before starting.
+            Five wrong tries locks that tablet out for five minutes. Kiosk mode will not start
+            at all until this is set — a tablet with no PIN has no way out of it.
           </p>
         </ActionForm>
       </CardContent>

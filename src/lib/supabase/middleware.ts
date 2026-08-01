@@ -4,7 +4,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { KIOSK_COOKIE, readKioskMode } from "@/lib/kiosk-mode";
 import type { Database } from "@/lib/types/database";
 
-const PUBLIC_ROUTES = ["/login", "/auth"];
+/**
+ * `/kiosk-stalled` is public because it is the screen for a device that has no
+ * session left to check. It lives outside `/kiosk` on purpose: everything under
+ * that segment goes through `requireKiosk()`, which redirects a sessionless
+ * request to /login — the exact redirect this screen exists to replace.
+ */
+const PUBLIC_ROUTES = ["/login", "/auth", "/kiosk-stalled"];
 
 /**
  * Refreshes the auth cookies on every request and gates the app routes.
@@ -42,8 +48,31 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
+
+    // A tablet whose session died does not get a login form.
+    //
+    // Nobody in a waiting room can satisfy one, and a customer staring at an
+    // email field on the salon's tablet is worse than a screen that says what
+    // happened. The signature cannot be checked — there is no user id to check
+    // it against — but nothing here needs it to be: the destination is a static
+    // screen with two lines of text on it, and the cookie is httpOnly, so the
+    // page a customer is looking at could not have set it.
+    if (request.cookies.get(KIOSK_COOKIE)) {
+      url.pathname = "/kiosk-stalled";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // A recovered session has no business sitting on the stalled screen.
+  if (user && pathname === "/kiosk-stalled") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/kiosk";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 
