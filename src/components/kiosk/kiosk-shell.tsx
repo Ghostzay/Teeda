@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WifiOff } from "lucide-react";
 
-import { kioskVerifyExitPin } from "@/lib/actions/kiosk";
+import { exitKioskMode } from "@/lib/actions/kiosk-mode";
 import { cn } from "@/lib/utils";
 
 /**
@@ -19,12 +19,10 @@ import { cn } from "@/lib/utils";
 export function KioskShell({
   salonName,
   deviceLabel,
-  hasExitPin,
   children,
 }: {
   salonName: string;
   deviceLabel: string;
-  hasExitPin: boolean;
   children: React.ReactNode;
 }) {
   const online = useOnline();
@@ -55,7 +53,7 @@ export function KioskShell({
       ) : null}
 
       <header className="flex items-center justify-between px-8 pt-8">
-        <ExitHatch salonName={salonName} enabled={hasExitPin} />
+        <ExitHatch salonName={salonName} />
         <span className="text-meta uppercase tracking-widest text-muted-text">{deviceLabel}</span>
       </header>
 
@@ -73,15 +71,17 @@ export function KioskShell({
  *
  * The PIN is compared in SQL: this component only ever learns yes or no.
  */
-function ExitHatch({ salonName, enabled }: { salonName: string; enabled: boolean }) {
+function ExitHatch({ salonName }: { salonName: string }) {
   const router = useRouter();
   const [taps, setTaps] = useState(0);
   const [asking, setAsking] = useState(false);
   const [pin, setPin] = useState("");
-  const [wrong, setWrong] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Taps have to be consecutive; a stray one an hour ago should not count.
+  // Five taps within three seconds. The window has to be short enough that a
+  // curious customer poking the screen does not stumble into it, and long
+  // enough that a person deliberately tapping five times makes it.
   useEffect(() => {
     if (taps === 0) return;
     const timer = setTimeout(() => setTaps(0), 3000);
@@ -89,7 +89,6 @@ function ExitHatch({ salonName, enabled }: { salonName: string; enabled: boolean
   }, [taps]);
 
   const tap = () => {
-    if (!enabled) return;
     setTaps((count) => {
       if (count + 1 >= 5) {
         setAsking(true);
@@ -101,18 +100,28 @@ function ExitHatch({ salonName, enabled }: { salonName: string; enabled: boolean
 
   const submit = async () => {
     setBusy(true);
-    setWrong(false);
-    const ok = await kioskVerifyExitPin(pin);
-    if (ok) {
-      // Back to the lobby, still signed in. Signing out here would mean
-      // re-typing the account password to restart the tablet, which is the
-      // thing a PIN exists to avoid.
-      router.replace("/kiosk/home");
+    setMessage(null);
+
+    const result = await exitKioskMode(pin);
+    setPin("");
+
+    if (result.result === "ok") {
+      // Straight to where this session actually belongs. A kiosk account goes
+      // back to its ready screen; a manager gets their dashboard, because the
+      // downgrade is over and `realRole` is what it always was.
+      router.replace(result.to);
       return;
     }
-    setWrong(true);
-    setPin("");
+
     setBusy(false);
+    setMessage(
+      result.result === "locked_out"
+        ? "Too many tries. Try again in a few minutes."
+        : result.result === "no_pin"
+          ? "No manager PIN has been set for this salon."
+          : // Never "two attempts left" — that is help for somebody guessing.
+            "That PIN didn't match.",
+    );
   };
 
   return (
@@ -139,14 +148,14 @@ function ExitHatch({ salonName, enabled }: { salonName: string; enabled: boolean
               onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 8))}
               className="w-full rounded-xl border border-subtle bg-surface-sunken px-4 py-3 text-center text-2xl tracking-[0.5em] text-primary-text"
             />
-            {wrong ? <p className="text-sm text-danger">That PIN didn&apos;t match.</p> : null}
+            {message ? <p className="text-sm text-danger">{message}</p> : null}
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setAsking(false);
                   setPin("");
-                  setWrong(false);
+                  setMessage(null);
                 }}
                 className="min-h-14 flex-1 rounded-xl border border-subtle text-lg font-semibold text-secondary-text"
               >

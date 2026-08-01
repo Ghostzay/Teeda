@@ -21,7 +21,6 @@ export default async function KioskPage() {
     <KioskShell
       salonName={context?.salon_name ?? session.salon.name}
       deviceLabel={context?.device_label ?? "Kiosk"}
-      hasExitPin={context?.has_exit_pin ?? false}
     >
       <KioskFlow
       salonName={context?.salon_name ?? session.salon.name}

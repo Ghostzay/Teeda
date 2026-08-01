@@ -1,6 +1,7 @@
 "use server";
 
 import { requireKiosk, requireManager } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type {
@@ -261,4 +262,64 @@ export async function kioskBook(args: {
   revalidatePath("/appointments");
 
   return data as KioskBooking;
+}
+
+/**
+ * Generate a fresh password for a tablet, and hand it back exactly once.
+ *
+ * A device password is not a memorised secret — it is typed once on a tablet
+ * and then never again. Making a manager invent one means it will be
+ * "salon2024", so this generates it. The plaintext is returned to the caller
+ * and never stored anywhere: the only copy is the one on screen, which is why
+ * the UI makes you confirm you saved it before it disappears.
+ */
+export async function resetKioskPassword(
+  deviceId: string,
+): Promise<{ ok: boolean; email?: string; password?: string; error?: string }> {
+  const session = await requireManager();
+  const supabase = await createClient();
+
+  const { data: device } = await supabase
+    .from("kiosk_devices")
+    .select("id, label")
+    .eq("id", deviceId)
+    .eq("salon_id", session.salon.id)
+    .maybeSingle();
+
+  if (!device) return { ok: false, error: "That tablet is not on this salon." };
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Admin client unavailable." };
+  }
+
+  const password = generateDevicePassword();
+  const { data: updated, error } = await admin.auth.admin.updateUserById(deviceId, {
+    password,
+    // A device has no inbox to confirm from, and a tablet that cannot sign in
+    // until somebody clicks a link in an email nobody owns is a dead tablet.
+    email_confirm: true,
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/settings");
+  return { ok: true, email: updated.user?.email ?? "", password };
+}
+
+/**
+ * Six groups of four, from an unambiguous alphabet.
+ *
+ * No 0/O, 1/l/I: this gets read off a laptop and typed on a tablet keyboard,
+ * often by somebody who did not generate it. Ambiguity there costs a support
+ * call, and the entropy lost is nothing next to the length.
+ */
+function generateDevicePassword(): string {
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  const bytes = new Uint32Array(24);
+  crypto.getRandomValues(bytes);
+  const chars = [...bytes].map((n) => alphabet[n % alphabet.length]);
+  return [0, 4, 8, 12, 16, 20].map((i) => chars.slice(i, i + 4).join("")).join("-");
 }

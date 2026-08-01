@@ -1,5 +1,6 @@
-import { KioskLobby } from "@/components/kiosk/kiosk-lobby";
+import { KioskReady } from "@/components/kiosk/kiosk-ready";
 import { kioskAccount } from "@/lib/actions/kiosk";
+import { touchKioskSignIn } from "@/lib/actions/kiosk-mode";
 import { requireKiosk } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -14,12 +15,14 @@ export const dynamic = "force-dynamic";
  *
  * This is that moment: confirm the device, then start.
  */
-export default async function KioskHomePage() {
+export default async function KioskReadyPage() {
   const session = await requireKiosk();
   const account = await kioskAccount();
+  // Stamp the device's last sign-in so the manager list can show it.
+  await touchKioskSignIn();
 
   return (
-    <KioskLobby
+    <KioskReady
       salonName={account?.salon_name ?? session.salon.name}
       deviceLabel={account?.device_label ?? session.profile.full_name}
       isActive={account?.is_active ?? false}

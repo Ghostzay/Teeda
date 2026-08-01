@@ -137,7 +137,7 @@ export function homeForRole(role: UserRole): string {
   // dashboard — the one screen it exists to never show.
   // The lobby, not the customer-facing screen: signing in should make you
   // staff holding a tablet, not a tablet.
-  if (role === "kiosk") return "/kiosk/home";
+  if (role === "kiosk") return "/kiosk/ready";
   if (role === "tech") return "/tech";
   return "/dashboard";
 }

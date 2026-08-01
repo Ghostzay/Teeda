@@ -1,8 +1,10 @@
 import "server-only";
 
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { KIOSK_COOKIE, readKioskMode } from "@/lib/kiosk-mode";
 import { homeForRole } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { SessionContext, UserRole } from "@/lib/types";
@@ -48,19 +50,35 @@ export const getSessionContext = cache(async (): Promise<SessionContext | null> 
 
   if (!salon) return null;
 
+  // The session downgrade.
+  //
+  // Read here, once, so that EVERY server component, server action and query
+  // helper in the app sees it — they all resolve their role through this
+  // object. A manager who started kiosk mode on the front tablet is a kiosk
+  // from this line onward: `canManageFloor` false, `isManager` false, and
+  // `requireManager()` turns them away. Not hidden UI — a different session.
+  //
+  // `realRole` is kept so the exit can put them back, and so the kiosk screen
+  // can say whose session it is borrowing.
+  const kioskMode = await readKioskMode((await cookies()).get(KIOSK_COOKIE)?.value, user.id);
+  const effectiveRole: UserRole = kioskMode ? "kiosk" : profile.role;
+
   return {
     userId: user.id,
     email: user.email ?? "",
     profile,
     salon,
-    role: profile.role,
-    isSuperAdmin: profile.role === "super_admin",
+    role: effectiveRole,
+    realRole: profile.role,
+    kioskMode: kioskMode !== null,
+    kioskDeviceKey: kioskMode?.deviceKey ?? null,
+    isSuperAdmin: effectiveRole === "super_admin",
     // The owner is a manager with extra rights, not a separate track — the
     // SQL helpers agree, so settings never lock the owner out.
-    isManager: profile.role === "manager" || profile.role === "super_admin",
-    isAdmin: profile.role === "admin",
-    isTech: profile.role === "tech",
-    isKiosk: profile.role === "kiosk",
+    isManager: effectiveRole === "manager" || effectiveRole === "super_admin",
+    isAdmin: effectiveRole === "admin",
+    isTech: effectiveRole === "tech",
+    isKiosk: effectiveRole === "kiosk",
     // An allow-list, not `role !== "tech"`.
     //
     // Deny-by-exception reads the same until the day a role is added, and then
@@ -68,7 +86,7 @@ export const getSessionContext = cache(async (): Promise<SessionContext | null> 
     // rendering the dashboard, the queue and the payment controls on a tablet
     // pointed at the waiting room. The SQL side (`can_manage_floor()`) has
     // always been an allow-list; this is the app agreeing with it.
-    canManageFloor: FLOOR_ROLES.includes(profile.role),
+    canManageFloor: FLOOR_ROLES.includes(effectiveRole),
   };
 });
 

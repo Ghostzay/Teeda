@@ -288,7 +288,17 @@ export type SessionContext = {
   email: string;
   profile: Profile;
   salon: Salon;
+  /**
+   * The role every check in the app uses. Equals `realRole` normally, and is
+   * forced to 'kiosk' while this device is in kiosk mode — the downgrade is
+   * applied once, in `getSessionContext`, so nothing downstream can forget it.
+   */
   role: UserRole;
+  /** What the account actually is. Only the exit and the kiosk screen use it. */
+  realRole: UserRole;
+  kioskMode: boolean;
+  /** Keys the PIN lockout to this device. Null when not in kiosk mode. */
+  kioskDeviceKey: string | null;
   isSuperAdmin: boolean;
   isManager: boolean;
   isAdmin: boolean;

@@ -45,6 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             role={ROLE_LABEL[role]}
             salon={salon.name}
             signOut={signOut}
+            hasExitPin={Boolean(salon.kiosk_exit_pin_hash)}
           />
         </header>
 

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { KIOSK_COOKIE, readKioskMode } from "@/lib/kiosk-mode";
 import type { Database } from "@/lib/types/database";
 
 const PUBLIC_ROUTES = ["/login", "/auth"];
@@ -56,14 +57,16 @@ export async function updateSession(request: NextRequest) {
   // --------------------------------------------------------------------------
   // Kiosk containment.
   //
-  // A tablet in the waiting room must not be one typed URL away from the
-  // takings. This keeps it on /kiosk/* and keeps everyone else off.
+  // Two ways to be a kiosk here:
   //
-  // It is the *cheap* half of the boundary, not the boundary: it runs one
-  // query per request and can be sidestepped by anything the matcher misses.
-  // The layouts re-check with `requireKiosk()` / `requireSession()`, and RLS
-  // refuses the data regardless. Three layers, and only the last one is load
-  // bearing.
+  //   * the account's role is 'kiosk'  — a tablet's own login;
+  //   * the kiosk-mode cookie is set   — any role that started kiosk mode on
+  //     this device, verified against a signature bound to their user id.
+  //
+  // This is the cheap half of the boundary, not the boundary. `getSessionContext`
+  // applies the same downgrade on the render path, so a route the matcher misses
+  // still gets a kiosk session rather than a manager one, and RLS refuses the
+  // data underneath both. Three layers; the last one is load bearing.
   // --------------------------------------------------------------------------
   if (user) {
     const { data: profile } = await supabase
@@ -72,21 +75,43 @@ export async function updateSession(request: NextRequest) {
       .eq("id", user.id)
       .maybeSingle();
 
-    const isKiosk = profile?.role === "kiosk";
+    const inKioskMode =
+      (await readKioskMode(request.cookies.get(KIOSK_COOKIE)?.value, user.id)) !== null;
+    const isKioskRole = profile?.role === "kiosk";
+    const confined = isKioskRole || inKioskMode;
     const onKioskRoute = pathname === "/kiosk" || pathname.startsWith("/kiosk/");
 
-    if (isKiosk && !onKioskRoute) {
+    if (confined && !onKioskRoute) {
       const url = request.nextUrl.clone();
-      url.pathname = "/kiosk";
+      // `/kiosk/ready`, not `/kiosk`.
+      //
+      // This line said `/kiosk` and that was the dead end: signing in on a
+      // tablet dropped it straight into the locked customer screen, past the
+      // screen with the Start button on it. The exit hatch is disabled until a
+      // PIN exists, and there is no way to set a PIN before first sign-in — so
+      // the tablet was locked with no way out at all.
+      //
+      // Landing on `ready` means arriving as staff holding a device. Entering
+      // the locked screen is now something somebody chooses.
+      url.pathname = inKioskMode ? "/kiosk" : "/kiosk/ready";
       url.search = "";
       return NextResponse.redirect(url);
     }
 
-    if (!isKiosk && onKioskRoute) {
+    if (!confined && onKioskRoute) {
       const url = request.nextUrl.clone();
       // A tech has no dashboard, so send each role somewhere it can actually
       // load rather than bouncing them through a second redirect.
       url.pathname = profile?.role === "tech" ? "/tech" : "/dashboard";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+
+    // Already in kiosk mode: the ready screen is behind the PIN, not one tap
+    // away. Without this, "start kiosk mode" would be undone by the back button.
+    if (inKioskMode && pathname.startsWith("/kiosk/ready")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/kiosk";
       url.search = "";
       return NextResponse.redirect(url);
     }

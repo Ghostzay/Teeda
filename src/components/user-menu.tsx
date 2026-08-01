@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogOut } from "lucide-react";
 
 import { AnimatePresence, motion } from "@/components/motion";
+import { StartKioskModeButton } from "@/components/kiosk/start-kiosk-mode";
 import { AppearanceMenu } from "@/components/theme-picker";
 import { Button } from "@/components/ui/button";
 import { initials } from "@/lib/format";
@@ -19,11 +20,14 @@ export function UserMenu({
   role,
   salon,
   signOut,
+  hasExitPin,
 }: {
   name: string;
   role: string;
   salon: string;
   signOut: () => Promise<void>;
+  /** Drives the warning on the confirm dialog when no PIN has been set. */
+  hasExitPin: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const container = useRef<HTMLDivElement>(null);
@@ -84,7 +88,15 @@ export function UserMenu({
 
             <AppearanceMenu />
 
-            <form action={signOut} className="mt-3 border-t border-subtle pt-3">
+            {/* Any signed-in role can lock this device. The tablet by the door
+                is often somebody's own phone or a shared iPad already signed in
+                as a manager — asking them to sign out and back in as a kiosk
+                account is how it ends up not being used at all. */}
+            <div className="mt-3 border-t border-subtle pt-3">
+              <StartKioskModeButton hasExitPin={hasExitPin} />
+            </div>
+
+            <form action={signOut} className="mt-1 border-t border-subtle pt-3">
               <Button variant="ghost" type="submit" className="w-full justify-start">
                 <LogOut className="size-4" />
                 Sign out

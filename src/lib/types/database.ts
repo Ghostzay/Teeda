@@ -498,6 +498,8 @@ export type Database = {
           label: string;
           is_active: boolean;
           last_seen_at: string | null;
+          last_sign_in_at: string | null;
+          entered_kiosk_mode_at: string | null;
           created_by: string | null;
           created_at: string;
         };
@@ -507,6 +509,8 @@ export type Database = {
           label: string;
           is_active?: boolean;
           last_seen_at?: string | null;
+          last_sign_in_at?: string | null;
+          entered_kiosk_mode_at?: string | null;
           created_by?: string | null;
           created_at?: string;
         };
@@ -516,6 +520,8 @@ export type Database = {
           label?: string;
           is_active?: boolean;
           last_seen_at?: string | null;
+          last_sign_in_at?: string | null;
+          entered_kiosk_mode_at?: string | null;
           created_by?: string | null;
           created_at?: string;
         };
@@ -1099,6 +1105,19 @@ export type Database = {
       appointment_minutes: {
         Args: { p_appointment_id: string };
         Returns: number;
+      };
+      kiosk_verify_exit_pin: {
+        Args: { p_pin: string; p_device_key: string };
+        // JSON: { result: "ok" | "wrong" | "locked_out" | "no_pin" | "denied" }
+        Returns: unknown;
+      };
+      kiosk_mark_mode: {
+        Args: { p_entered: boolean };
+        Returns: undefined;
+      };
+      kiosk_touch_sign_in: {
+        Args: Record<string, never>;
+        Returns: undefined;
       };
       kiosk_account: {
         Args: Record<string, never>;

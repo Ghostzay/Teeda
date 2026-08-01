@@ -81,6 +81,8 @@ from (
          pg_get_functiondef(to_regprocedure('public.turn_queue(uuid, public.skill[])'))
            ~ 'salon_today'),
     (28, '20260728270000_kiosk_accounts.sql',
-         to_regprocedure('public.kiosk_account()') is not null)
+         to_regprocedure('public.kiosk_account()') is not null),
+    (29, '20260728280000_kiosk_mode.sql',
+         to_regclass('public.kiosk_pin_attempts') is not null)
 ) as t (step, file, applied)
 order by step;

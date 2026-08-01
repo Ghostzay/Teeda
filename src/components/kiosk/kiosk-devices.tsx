@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { ResetPasswordButton } from "@/components/kiosk/reset-password-button";
 import { setKioskDeviceActive, setKioskExitPin } from "@/lib/actions/kiosk";
 import { formatDate } from "@/lib/format";
 import type { KioskDevice } from "@/lib/types";
@@ -65,14 +66,22 @@ export function KioskDevices({
                 )}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{device.label}</p>
+                  <p className="flex flex-wrap items-center gap-2 font-medium">
+                    {device.label}
+                    {device.entered_kiosk_mode_at ? (
+                      <span className="rounded-full bg-accent-subtle px-2 py-0.5 text-meta font-semibold text-accent-default">
+                        In kiosk mode
+                      </span>
+                    ) : null}
+                  </p>
                   <p className="text-meta text-muted-text">
-                    {device.last_seen_at
-                      ? `Last used ${formatDate(device.last_seen_at)}`
+                    {device.last_sign_in_at
+                      ? `Last signed in ${formatDate(device.last_sign_in_at)}`
                       : "Not signed in yet"}
                     {device.is_active ? "" : " · switched off"}
                   </p>
                 </div>
+                <ResetPasswordButton deviceId={device.id} label={device.label} />
                 <ActionButton
                   action={setKioskDeviceActive}
                   fields={{ id: device.id, is_active: device.is_active ? "false" : "true" }}
@@ -89,6 +98,17 @@ export function KioskDevices({
             ))}
           </ul>
         )}
+
+        {/* The exit steps, in front of the manager who will be phoned about
+            them. Someone always forgets, and the person who forgets is rarely
+            the person who started it. */}
+        <div className="rounded-xl border border-subtle bg-surface-sunken p-4 text-sm">
+          <p className="font-semibold">Leaving kiosk mode on a tablet</p>
+          <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-secondary-text">
+            <li>Tap the salon name, top-left of the tablet, five times within three seconds.</li>
+            <li>Enter the manager PIN below.</li>
+          </ol>
+        </div>
 
         <ActionForm
           action={setKioskExitPin}
@@ -107,9 +127,8 @@ export function KioskDevices({
             <SubmitButton>Save</SubmitButton>
           </div>
           <p className="text-meta text-muted-text">
-            Five taps on the salon name at the top of the kiosk, then this PIN, leaves kiosk
-            mode and hands the tablet back — it stays signed in, so starting again is one tap.
-            Without a PIN there is no way out of kiosk mode on the device itself.
+            Five wrong tries locks that tablet out for five minutes. Without a PIN set there is
+            no way out of kiosk mode on the device itself — set one before starting.
           </p>
         </ActionForm>
       </CardContent>
