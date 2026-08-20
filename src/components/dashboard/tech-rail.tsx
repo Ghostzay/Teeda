@@ -4,7 +4,7 @@ import { Coffee, LogIn, Scissors, Timer } from "lucide-react";
 
 import { ActionButton } from "@/components/action-button";
 import { useNow } from "@/components/live-wait";
-import { Stagger, StaggerItem } from "@/components/motion";
+import { AnimatePresence, EASE, Stagger, StaggerItem, motion } from "@/components/motion";
 import { checkInForTurns } from "@/lib/actions/rotation";
 import { formatMoney, formatTime, initials } from "@/lib/format";
 import type { FloorStatus } from "@/lib/types";
@@ -117,21 +117,31 @@ export function TechRail({ techs }: { techs: FloorStatus[] }) {
                 </div>
               </header>
 
-              <div
-                className={cn(
-                  "flex items-center gap-2 rounded-xl border px-3 py-2",
-                  presence.className,
-                )}
-              >
-                <Icon className="size-4 shrink-0" aria-hidden />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold leading-tight">{presence.label}</p>
-                  <p className="truncate text-meta opacity-90">
-                    {tech.current_client ? `${tech.current_client} · ` : ""}
-                    {presence.detail}
-                  </p>
-                </div>
-              </div>
+              {/* Keyed on the status, so free -> in-service is an animated
+                  hand-off rather than a text swap. `initial={false}` keeps the
+                  first paint still; only a *change* moves. */}
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.div
+                  key={presence.key}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18, ease: EASE }}
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl border px-3 py-2",
+                    presence.className,
+                  )}
+                >
+                  <Icon className="size-4 shrink-0" aria-hidden />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold leading-tight">{presence.label}</p>
+                    <p className="truncate text-meta opacity-90">
+                      {tech.current_client ? `${tech.current_client} · ` : ""}
+                      {presence.detail}
+                    </p>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
 
               <div className="mt-auto flex items-end justify-between gap-3">
                 <div>

@@ -557,6 +557,49 @@
     outline-offset: 2px;
   }
 
+  /* Press feedback on every control, from CSS so no component opts in.
+     `:where()` keeps specificity at zero — any inline transform (framer's
+     whileTap) simply wins. `.no-press` exempts the full-screen kiosk buttons,
+     where scaling the entire screen reads as a glitch, not a press. */
+  :where(button, [role="button"]):not(.no-press):active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  /* The entry mark's entrance. CSS rather than framer so it starts at first
+     paint — before hydration — and a slow tablet sees the mark, not a blank
+     branded rectangle waiting for JavaScript. */
+  @keyframes entry-logo-in {
+    from {
+      opacity: 0;
+      transform: scale(0.82);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .entry-logo-in {
+    animation: entry-logo-in 400ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(button, [role="button"]):active {
+      transform: none;
+    }
+
+    .entry-logo-in {
+      animation: none;
+    }
+
+    /* The entry sequence never paints for reduced-motion users — removed by
+       media query before first paint, no JS involved. The component still
+       runs its effect to stamp the day as seen. */
+    .entry-overlay {
+      display: none;
+    }
+  }
+
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }

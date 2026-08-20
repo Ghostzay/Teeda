@@ -291,7 +291,7 @@ function Idle({ salonName, onStart }: { salonName: string; onStart: () => void }
     <button
       type="button"
       onClick={onStart}
-      className="flex flex-1 flex-col items-center justify-center gap-6 px-8 text-center"
+      className="no-press flex flex-1 flex-col items-center justify-center gap-6 px-8 text-center"
     >
       <span className="text-2xl text-secondary-text">{t.welcomeTo(salonName)}</span>
       <span className="text-[clamp(3rem,10vw,6rem)] font-semibold leading-none tracking-tight">
@@ -467,7 +467,7 @@ function Success({
     <button
       type="button"
       onClick={onDone}
-      className="flex flex-1 flex-col items-center justify-center gap-5 px-8 text-center"
+      className="no-press flex flex-1 flex-col items-center justify-center gap-5 px-8 text-center"
     >
       <span className="flex size-24 items-center justify-center rounded-full bg-success-bg text-success">
         <Check className="size-14" />
@@ -495,7 +495,7 @@ function Problem({ message, onDone }: { message: ProblemKey; onDone: () => void 
     <button
       type="button"
       onClick={onDone}
-      className="flex flex-1 flex-col items-center justify-center gap-5 px-8 text-center"
+      className="no-press flex flex-1 flex-col items-center justify-center gap-5 px-8 text-center"
     >
       <AlertCircle className="size-16 text-warning" />
       <span className="max-w-xl text-[clamp(2rem,6vw,3rem)] font-semibold leading-tight">
