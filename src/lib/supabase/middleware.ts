@@ -10,7 +10,9 @@ import type { Database } from "@/lib/types/database";
  * that segment goes through `requireKiosk()`, which redirects a sessionless
  * request to /login — the exact redirect this screen exists to replace.
  */
-const PUBLIC_ROUTES = ["/login", "/auth", "/kiosk-stalled"];
+/* `/brand-preview` is the design-system reference sheet: static markup, no
+   data, no session — public the way a styleguide is public. */
+const PUBLIC_ROUTES = ["/login", "/auth", "/kiosk-stalled", "/brand-preview"];
 
 /**
  * Refreshes the auth cookies on every request and gates the app routes.

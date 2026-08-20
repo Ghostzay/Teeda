@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Zolvora">
+  <!--
+    The Zolvora mark, redrawn as vector from the supplied raster logo.
+    Every gradient stop is a measured colour from that file's gold ramp:
+    #f3dba4 #e3c78a #d5b77a #c6a56a #b6955c #a98955 #987746 #896739 #463929.
+    Facets carry different runs of the ramp; that alternation is what makes
+    flat polygons read as folded metal.
+  -->
+  <defs>
+    <linearGradient id="zv-top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3dba4"/>
+      <stop offset="1" stop-color="#d5b77a"/>
+    </linearGradient>
+    <linearGradient id="zv-top-face" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#d5b77a"/>
+      <stop offset="0.6" stop-color="#c6a56a"/>
+      <stop offset="1" stop-color="#a98955"/>
+    </linearGradient>
+    <linearGradient id="zv-diag-hi" x1="0.8" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#e3c78a"/>
+      <stop offset="0.5" stop-color="#c6a56a"/>
+      <stop offset="1" stop-color="#b6955c"/>
+    </linearGradient>
+    <linearGradient id="zv-diag-lo" x1="0.8" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#a98955"/>
+      <stop offset="0.55" stop-color="#987746"/>
+      <stop offset="1" stop-color="#896739"/>
+    </linearGradient>
+    <linearGradient id="zv-bottom-face" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#b6955c"/>
+      <stop offset="0.5" stop-color="#d5b77a"/>
+      <stop offset="1" stop-color="#e3c78a"/>
+    </linearGradient>
+    <linearGradient id="zv-deep" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#987746"/>
+      <stop offset="1" stop-color="#463929"/>
+    </linearGradient>
+    <linearGradient id="zv-wedge" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#c6a56a"/>
+      <stop offset="1" stop-color="#f3dba4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ===== bottom bar (painted first; the diagonal folds onto it) ===== -->
+  <polygon points="22,71 80,71 80,84 22,84" fill="url(#zv-bottom-face)"/>
+  <polygon points="22,84 80,84 77,89 25,89" fill="url(#zv-deep)"/>
+  <!-- right-end wedge, angling up and out -->
+  <polygon points="80,71 88,60 88,66 80,77" fill="url(#zv-wedge)"/>
+  <polygon points="80,77 88,66 88,72 80,84" fill="url(#zv-deep)"/>
+
+  <!-- ===== diagonal band, one run corner to corner, creased lengthwise ===== -->
+  <polygon points="64.1,15.8 72,22 28.5,77.4 20.6,71.2" fill="url(#zv-diag-hi)"/>
+  <polygon points="72,22 79.9,28.2 36.4,83.6 28.5,77.4" fill="url(#zv-diag-lo)"/>
+  <!-- inline sliver echoing the band's lit edge -->
+  <polygon points="50.3,30.3 19.9,68.9 18.4,67.8 48.8,29.2" fill="url(#zv-diag-hi)"/>
+
+  <!-- ===== top bar (covers the band's upper reach) ===== -->
+  <polygon points="23,12 81,12 78,17 20,17" fill="url(#zv-top)"/>
+  <polygon points="20,17 78,17 78,29 20,29" fill="url(#zv-top-face)"/>
+  <!-- fold from the bevel corner down into the band -->
+  <polygon points="78,17 81,12 78.3,26.9 78,29" fill="url(#zv-deep)"/>
+  <!-- left-end wedge, angling down and out — mirrors the bottom-right one -->
+  <polygon points="20,17 20,23 12,34 12,28" fill="url(#zv-wedge)"/>
+  <polygon points="20,23 20,29 12,40 12,34" fill="url(#zv-deep)"/>
+
+  <!-- ===== nested chevron in the lower-right counter ===== -->
+  <g fill="none" stroke="#d5b77a">
+    <path d="M 56.5 68 L 67 55.5 L 77.5 68" stroke-width="3.2"/>
+    <path d="M 62 68 L 67 62 L 72 68" stroke-width="2"/>
+  </g>
+</svg>

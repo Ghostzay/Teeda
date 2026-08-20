@@ -56,6 +56,23 @@ function writeCookie(name: string, value: string) {
  * failed write must never block or revert a theme switch — worst case the
  * choice lives on this device only.
  */
+/**
+ * This device's own saved choice. The blocking script honours localStorage
+ * before first paint, so the provider must initialise from the same source —
+ * initialising from the server props alone re-stamps the cookie's answer on
+ * mount, which silently *reverts* the correct pre-paint theme whenever cookies
+ * and localStorage disagree (cleared cookies, another browser profile, a
+ * device that last chose offline). That revert was a real shipped bug.
+ */
+function storedAppearance(): { theme?: unknown; mode?: unknown } {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}") as { theme?: unknown; mode?: unknown };
+  } catch {
+    return {};
+  }
+}
+
 export function ThemeProvider({
   children,
   initialTheme,
@@ -65,10 +82,16 @@ export function ThemeProvider({
   initialTheme: ThemeId;
   initialMode: ModePreference;
 }) {
-  const [theme, setThemeState] = useState<ThemeId>(initialTheme);
-  const [mode, setModeState] = useState<ModePreference>(initialMode);
-  const [resolvedMode, setResolvedMode] = useState<ResolvedMode>(
-    initialMode === "system" ? "dark" : initialMode,
+  const [theme, setThemeState] = useState<ThemeId>(() => {
+    const saved = storedAppearance().theme;
+    return isThemeId(saved) ? saved : initialTheme;
+  });
+  const [mode, setModeState] = useState<ModePreference>(() => {
+    const saved = storedAppearance().mode;
+    return saved === "light" || saved === "dark" || saved === "system" ? saved : initialMode;
+  });
+  const [resolvedMode, setResolvedMode] = useState<ResolvedMode>(() =>
+    mode === "system" ? systemMode() : mode,
   );
 
   // Read the real system preference once mounted. Before this the server's

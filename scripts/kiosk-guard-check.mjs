@@ -43,7 +43,16 @@ console.log("Every staff route entry point calls a server guard:");
 // exemption nobody chose to give it. The stalled screen is listed by name
 // because it genuinely is public — it is the screen for a device with no
 // session left to guard.
-const PUBLIC = ["src/app/login/", "src/app/auth/", "src/app/kiosk/", "src/app/kiosk-stalled/"];
+// brand-preview is the design-system reference sheet: static markup, no data,
+// no session — public the way a styleguide is public, and listed by name so
+// nothing else inherits the exemption.
+const PUBLIC = [
+  "src/app/login/",
+  "src/app/auth/",
+  "src/app/kiosk/",
+  "src/app/kiosk-stalled/",
+  "src/app/brand-preview/",
+];
 for (const file of walk("src/app")) {
   if (PUBLIC.some((p) => file.startsWith(p))) continue;
   if (file === "src/app/layout.tsx") continue; // root shell, renders no data

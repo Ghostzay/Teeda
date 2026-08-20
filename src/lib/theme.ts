@@ -21,6 +21,23 @@
 
 export const THEMES = [
   {
+    id: "zolvora",
+    name: "Zolvora Gold",
+    description: "The brand palette — ink and gold, measured from the logo.",
+    swatch: {
+      dark: {
+        canvas: "oklch(0.197 0.01 277)",
+        raised: "oklch(0.232 0.01 277)",
+        accent: "oklch(0.792 0.086 84)",
+      },
+      light: {
+        canvas: "oklch(0.966 0.008 85)",
+        raised: "oklch(0.992 0.004 85)",
+        accent: "oklch(0.508 0.076 73)",
+      },
+    },
+  },
+  {
     id: "midnight-plum",
     /** Named after the polish, not the palette — the picker is a polish rack. */
     name: "Midnight Plum",
@@ -66,7 +83,7 @@ export type ModePreference = "light" | "dark" | "system";
 /** What actually gets stamped on <html>. */
 export type ResolvedMode = "light" | "dark";
 
-export const DEFAULT_THEME: ThemeId = "midnight-plum";
+export const DEFAULT_THEME: ThemeId = "zolvora";
 
 export const STORAGE_KEY = "teeda-appearance";
 export const THEME_COOKIE = "teeda-theme";
@@ -83,7 +100,7 @@ export function themeById(id: string | null | undefined): Theme {
 /**
  * Resolution order, applied everywhere a theme is needed:
  *
- *   user override → salon default → midnight plum
+ *   user override → salon default → the brand theme (zolvora)
  *
  * An unrecognised name (a theme that was removed, or one from a newer build)
  * falls through to the next source rather than erroring. That is why the

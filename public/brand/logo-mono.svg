@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Zolvora">
+  <!--
+    Monochrome mark for small sizes and single-colour contexts. Inherits
+    currentColor so it takes any theme's token — never a hardcoded gold.
+    The facets collapse to one silhouette: gradients don't survive 20px.
+  -->
+  <g fill="currentColor">
+    <polygon points="20,14 82,14 82,28 55,28 20,28"/>
+    <polygon points="66,28 82,28 34,72 18,72"/>
+    <polygon points="18,72 80,72 80,86 18,86"/>
+  </g>
+  <path d="M 58 66 L 67 55.5 L 76 66" fill="none" stroke="currentColor" stroke-width="3.4"/>
+</svg>

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Inter, Montserrat } from "next/font/google";
 import { cookies } from "next/headers";
 
 import { MotionProvider } from "@/components/motion";
@@ -14,6 +15,21 @@ import {
 } from "@/lib/theme";
 import "./globals.css";
 
+/**
+ * The brand pair, self-hosted at build time (next/font — no runtime fetch, so
+ * a salon tablet on flaky wifi never waits on a font CDN).
+ *
+ *   Montserrat  display — geometric caps that sit with the ZOLVORA wordmark.
+ *   Inter       text — a screen face built for UI legibility; the app is read
+ *               from several feet away on a mounted tablet, so the text face
+ *               is chosen for distance legibility over personality.
+ *
+ * Exposed as CSS variables; globals.css decides what uses which. Components
+ * never name a font, same rule as colours.
+ */
+const inter = Inter({ subsets: ["latin", "vietnamese"], variable: "--font-text" });
+const montserrat = Montserrat({ subsets: ["latin", "vietnamese"], variable: "--font-display" });
+
 export const metadata: Metadata = {
   title: "Teeda — Salon Management",
   description: "Fair turn rotation, walk-ins, appointments and clients for nail salons.",
@@ -26,8 +42,9 @@ export const viewport: Viewport = {
   // Follows the mode the browser is about to paint, so a phone's status bar
   // isn't left in the wrong colour.
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#211a24" },
-    { media: "(prefers-color-scheme: light)", color: "#f5f2f6" },
+    // Zolvora ink and paper — the measured canvas of each mode.
+    { media: "(prefers-color-scheme: dark)", color: "#14151a" },
+    { media: "(prefers-color-scheme: light)", color: "#f6f3ea" },
   ],
 };
 
@@ -54,6 +71,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       lang="en"
       data-theme={theme}
       data-mode={mode === "system" ? "dark" : mode}
+      className={`${inter.variable} ${montserrat.variable}`}
       suppressHydrationWarning
     >
       <head>

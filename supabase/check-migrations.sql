@@ -91,6 +91,9 @@ from (
          -- the cheap proxy; the search_path check is the one that matters.
          to_regprocedure('public.salon_has_exit_pin()') is not null
          and pg_get_functiondef(to_regprocedure('public.set_kiosk_exit_pin(text)'))
-               ~ 'search_path.*extensions')
+               ~ 'search_path.*extensions'),
+    (31, '20260728300000_zolvora_default_theme.sql',
+         pg_get_functiondef(to_regprocedure('public.bootstrap_salon(text, text)'))
+           ~ 'zolvora')
 ) as t (step, file, applied)
 order by step;
