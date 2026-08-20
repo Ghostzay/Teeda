@@ -77,12 +77,15 @@ export function KioskStalled({
         aria-label={salonName ?? "Salon"}
         className="text-2xl text-secondary-text"
       >
-        {salonName ?? "Teeda"}
+        {salonName ?? "Zolvora"}
       </button>
 
+      {/* Both languages, statically — this screen has no session, no state and
+          no business asking anyone to find a toggle. */}
       <p className="text-[clamp(2rem,6vw,3.5rem)] font-semibold leading-tight">
         Please notify staff
       </p>
+      <p className="text-2xl text-secondary-text">Vui lòng báo nhân viên</p>
       <p className="max-w-xl text-xl text-secondary-text">
         This tablet needs attention before it can take check-ins. Someone at the
         desk will sort it out.

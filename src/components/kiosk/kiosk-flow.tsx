@@ -10,6 +10,7 @@ import {
   type BookingIdentity,
 } from "@/components/kiosk/kiosk-booking";
 import { kioskCheckin, kioskLookup } from "@/lib/actions/kiosk";
+import { useKioskText } from "@/lib/kiosk-i18n";
 import type { KioskBooking, KioskCheckin, KioskLookup, KioskService } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +28,11 @@ type Step =
   | { name: "register"; phone: string }
   | { name: "booking"; identity: BookingIdentity }
   | { name: "booked"; booking: Extract<KioskBooking, { result: "booked" }> }
-  | { name: "problem"; message: string };
+  | { name: "problem"; message: ProblemKey };
+
+/** Key into the kiosk dictionary — resolved at render, so it follows the
+    language toggle rather than freezing in whichever language was active. */
+type ProblemKey = "tooManyTries" | "alreadyCheckedIn" | "notQuiteTime" | "seeFrontDesk";
 
 type State = { step: Step; misses: number };
 
@@ -87,10 +92,7 @@ function reducer(state: State, action: Action): State {
       if (lookup.result === "rate_limited") {
         return {
           ...state,
-          step: {
-            name: "problem",
-            message: "Too many tries just now. Please see the front desk.",
-          },
+          step: { name: "problem", message: "tooManyTries" },
         };
       }
 
@@ -134,10 +136,10 @@ function reducer(state: State, action: Action): State {
           name: "problem",
           message:
             result.result === "already_checked_in"
-              ? "You're already checked in — please take a seat."
+              ? "alreadyCheckedIn"
               : result.result === "outside_window"
-                ? "It's not quite time yet. Please see the front desk."
-                : "Please see the front desk.",
+                ? "notQuiteTime"
+                : "seeFrontDesk",
         },
       };
     }
@@ -170,14 +172,18 @@ export function KioskFlow({
 }) {
   const [state, dispatch] = useReducer(reducer, IDLE);
   const { step } = state;
+  const { resetLang } = useKioskText();
   // Kept so registration can prefill the number they already typed rather than
   // asking for it twice.
   const [lastDigits, setLastDigits] = useState("");
 
   const reset = useCallback(() => {
     setLastDigits("");
+    // The next customer starts in English; a tablet stuck in the previous
+    // customer's language is a tablet somebody walks away from.
+    resetLang();
     dispatch({ type: "reset" });
-  }, []);
+  }, [resetLang]);
   const idleWarning = useIdleReset(step.name !== "idle", reset);
 
   // Auto-lookup the instant the tenth digit lands: nobody should have to find
@@ -280,17 +286,22 @@ export function KioskFlow({
 // ---------------------------------------------------------------------------
 
 function Idle({ salonName, onStart }: { salonName: string; onStart: () => void }) {
+  const { t, lang } = useKioskText();
   return (
     <button
       type="button"
       onClick={onStart}
       className="flex flex-1 flex-col items-center justify-center gap-6 px-8 text-center"
     >
-      <span className="text-2xl text-secondary-text">Welcome to {salonName}</span>
+      <span className="text-2xl text-secondary-text">{t.welcomeTo(salonName)}</span>
       <span className="text-[clamp(3rem,10vw,6rem)] font-semibold leading-none tracking-tight">
-        Tap to check in
+        {t.tapToCheckIn}
       </span>
-      <span className="text-xl text-muted-text">Chạm để nhận phòng</span>
+      {/* The other language's invitation, so the toggle is discoverable from
+          across the room by the person who needs it. */}
+      <span className="text-xl text-muted-text">
+        {lang === "en" ? "Chạm để nhận chỗ" : "Tap to check in"}
+      </span>
     </button>
   );
 }
@@ -312,15 +323,12 @@ function Keypad({
   onBackspace: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useKioskText();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-8 py-4">
-      <p className="text-3xl font-semibold">What&apos;s your phone number?</p>
+      <p className="text-3xl font-semibold">{t.whatsYourNumber}</p>
 
-      {missed ? (
-        <p className="text-lg text-warning">
-          We didn&apos;t find that one. Give it another go.
-        </p>
-      ) : null}
+      {missed ? <p className="text-lg text-warning">{t.didntFindIt}</p> : null}
 
       <p
         aria-live="polite"
@@ -339,7 +347,7 @@ function Keypad({
               type="button"
               disabled={busy}
               onClick={() => (key === "⌫" ? onBackspace() : onDigit(key))}
-              aria-label={key === "⌫" ? "Delete" : key}
+              aria-label={key === "⌫" ? t.delete : key}
               className={cn(
                 // 72px keys: this is used standing up, one-handed, by someone
                 // who has never seen it before.
@@ -358,7 +366,7 @@ function Keypad({
         onClick={onCancel}
         className="min-h-14 px-6 text-lg font-medium text-muted-text"
       >
-        Cancel
+        {t.cancel}
       </button>
     </div>
   );
@@ -377,6 +385,7 @@ function Confirm({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useKioskText();
   if (lookup.state === "no_appointment" || !lookup.appointment) return null;
 
   const { appointment } = lookup;
@@ -397,7 +406,7 @@ function Confirm({
           <p className="text-3xl font-semibold tabular-nums">{time}</p>
           <p className="text-xl text-secondary-text">{appointment.services}</p>
           {appointment.tech_name ? (
-            <p className="text-lg text-muted-text">with {appointment.tech_name}</p>
+            <p className="text-lg text-muted-text">{t.with(appointment.tech_name)}</p>
           ) : null}
         </div>
       </div>
@@ -409,7 +418,7 @@ function Confirm({
           onClick={onConfirm}
           className="min-h-[88px] w-full max-w-lg rounded-2xl bg-accent-default text-3xl font-semibold text-on-accent disabled:opacity-60"
         >
-          {busy ? "Checking you in…" : "Check in"}
+          {busy ? t.checkingYouIn : t.checkIn}
         </button>
       ) : (
         <Notice
@@ -417,12 +426,12 @@ function Confirm({
           tone={lookup.state === "already_checked_in" ? "success" : "warning"}
         >
           {lookup.state === "already_checked_in"
-            ? "You're all set — please take a seat."
+            ? t.allSetTakeASeat
             : lookup.state === "already_done"
-              ? "That visit is already finished."
+              ? t.visitFinished
               : lookup.state === "too_early"
-                ? `Please check in within ${earlyMinutes} minutes of your appointment.`
-                : "That appointment has passed — please see the front desk."}
+                ? t.tooEarly(earlyMinutes)
+                : t.appointmentPassed}
         </Notice>
       )}
 
@@ -432,7 +441,7 @@ function Confirm({
         className="min-h-14 px-6 text-lg font-medium text-muted-text"
       >
         <ArrowLeft className="mr-2 inline size-5" />
-        Not you? Start over
+        {t.notYou}
       </button>
     </div>
   );
@@ -447,6 +456,7 @@ function Success({
   ahead: number;
   onDone: () => void;
 }) {
+  const { t } = useKioskText();
   // Auto-clear: nobody taps "done" on a success screen, they walk away.
   useEffect(() => {
     const timer = setTimeout(onDone, 12_000);
@@ -463,20 +473,19 @@ function Success({
         <Check className="size-14" />
       </span>
       <span className="text-[clamp(2.5rem,8vw,4.5rem)] font-semibold leading-none">
-        You&apos;re checked in
+        {t.youreCheckedIn}
       </span>
-      {tech ? <span className="text-2xl text-secondary-text">{tech} will be with you</span> : null}
+      {tech ? <span className="text-2xl text-secondary-text">{t.willBeWithYou(tech)}</span> : null}
       <span className="text-xl text-muted-text">
-        {ahead === 0
-          ? "You're next."
-          : `${ahead} ${ahead === 1 ? "person is" : "people are"} ahead of you.`}
+        {ahead === 0 ? t.youreNext : t.aheadOfYou(ahead)}
       </span>
-      <span className="text-lg text-muted-text">Please take a seat · Mời ngồi</span>
+      <span className="text-lg text-muted-text">{t.takeASeat}</span>
     </button>
   );
 }
 
-function Problem({ message, onDone }: { message: string; onDone: () => void }) {
+function Problem({ message, onDone }: { message: ProblemKey; onDone: () => void }) {
+  const { t } = useKioskText();
   useEffect(() => {
     const timer = setTimeout(onDone, 12_000);
     return () => clearTimeout(timer);
@@ -490,7 +499,7 @@ function Problem({ message, onDone }: { message: string; onDone: () => void }) {
     >
       <AlertCircle className="size-16 text-warning" />
       <span className="max-w-xl text-[clamp(2rem,6vw,3rem)] font-semibold leading-tight">
-        {message}
+        {t[message]}
       </span>
     </button>
   );
@@ -521,18 +530,19 @@ function Notice({
 }
 
 function IdlePrompt({ seconds, onStay }: { seconds: number; onStay: () => void }) {
+  const { t } = useKioskText();
   return (
     <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-surface-canvas/95 px-8 text-center">
-      <p className="text-5xl font-semibold">Still there?</p>
+      <p className="text-5xl font-semibold">{t.stillThere}</p>
       <p className="text-2xl text-secondary-text">
-        Starting over in <span className="tabular-nums">{seconds}</span>
+        {t.startingOverIn} <span className="tabular-nums">{seconds}</span>
       </p>
       <button
         type="button"
         onClick={onStay}
         className="min-h-[88px] rounded-2xl bg-accent-default px-12 text-2xl font-semibold text-on-accent"
       >
-        I&apos;m still here
+        {t.imStillHere}
       </button>
     </div>
   );

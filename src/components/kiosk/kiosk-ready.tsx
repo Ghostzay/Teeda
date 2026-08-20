@@ -155,7 +155,7 @@ function KioskModeConfirm({
         <ul className="list-disc space-y-1.5 pl-5 text-secondary-text">
           <li>This device locks to the customer check-in screen.</li>
           <li>
-            Everything else in Teeda becomes unreachable from this device —
+            Everything else in Zolvora becomes unreachable from this device —
             including the dashboard, the calendar and takings.
           </li>
           <li>It stays locked through a refresh, a restart and a reboot.</li>

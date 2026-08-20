@@ -5,13 +5,13 @@ import { AlertTriangle, ArrowLeft, Check, Loader2, Sparkles, UserRound } from "l
 
 import { kioskBook, kioskRegister, kioskSlots, kioskTechs } from "@/lib/actions/kiosk";
 import { formatMoney } from "@/lib/format";
+import { useKioskText } from "@/lib/kiosk-i18n";
 import { displacedBy, isBasketValid, toggleService } from "@/lib/services";
-import {
-  SERVICE_CATEGORY_LABEL,
-  type KioskBooking,
-  type KioskService,
-  type KioskSlot,
-  type KioskTechOption,
+import type {
+  KioskBooking,
+  KioskService,
+  KioskSlot,
+  KioskTechOption,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +42,7 @@ export function KioskBookingFlow({
   onDone: (booking: Extract<KioskBooking, { result: "booked" }>) => void;
   onCancel: () => void;
 }) {
+  const { t } = useKioskText();
   const [step, setStep] = useState<Step>("services");
   const [basket, setBasket] = useState<KioskService[]>([]);
   const [techs, setTechs] = useState<KioskTechOption[] | null>(null);
@@ -112,18 +113,18 @@ export function KioskBookingFlow({
     const grouped = groupByCategory(services);
     return (
       <Screen
-        title="What are you having?"
+        title={t.whatAreYouHaving}
         subtitle={identity.displayName}
         onBack={onCancel}
         footer={
           <Footer
             left={
               basket.length > 0
-                ? `${basket.length} selected · about ${minutes} min`
-                : "Choose at least one"
+                ? t.selectedSummary(basket.length, minutes)
+                : t.chooseAtLeastOne
             }
             right={basket.length > 0 ? formatMoney(total) : ""}
-            action="Continue"
+            action={t.continue_}
             disabled={basket.length === 0 || !isBasketValid(basket)}
             onAction={() => setStep("tech")}
           />
@@ -133,7 +134,7 @@ export function KioskBookingFlow({
           {grouped.map(([category, items]) => (
             <div key={category} className="space-y-2">
               <p className="text-lg font-semibold uppercase tracking-wide text-muted-text">
-                {SERVICE_CATEGORY_LABEL[category]}
+                {t.category[category]}
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {items.map((service) => {
@@ -164,8 +165,8 @@ export function KioskBookingFlow({
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-xl font-medium">{service.name}</span>
                         <span className="block text-base text-muted-text">
-                          {service.duration_minutes} min
-                          {swaps ? ` · replaces ${swaps.name}` : ""}
+                          {t.minutesShort(service.duration_minutes)}
+                          {swaps ? t.replaces(swaps.name) : ""}
                         </span>
                       </span>
                       <span className="shrink-0 text-xl font-semibold tabular-nums">
@@ -186,33 +187,30 @@ export function KioskBookingFlow({
   if (step === "tech") {
     return (
       <Screen
-        title="Who would you like?"
+        title={t.whoWouldYouLike}
         subtitle={basket.map((item) => item.name).join(" + ")}
         onBack={() => setStep("services")}
         footer={
           <Footer
-            left={techs === null ? "" : `${techs.length} available now`}
+            left={techs === null ? "" : t.availableNow(techs.length)}
             right=""
-            action="Continue"
+            action={t.continue_}
             disabled={techs === null || (techs.length === 0 && techId !== null)}
             onAction={() => setStep("time")}
           />
         }
       >
         {techs === null ? (
-          <Spinner label="Checking who's free…" />
+          <Spinner label={t.checkingWhosFree} />
         ) : techs.length === 0 ? (
-          <Empty
-            title="Nobody can take that today"
-            body="Try fewer services, or see the front desk and they'll sort something out."
-          />
+          <Empty title={t.nobodyToday} body={t.nobodyTodayBody} />
         ) : (
           <div className="space-y-2">
             {/* Pinned and preselected: the fair default, and the one most
                 likely to get them seated soonest. */}
             <TechRow
-              name="First available"
-              detail={soonest(techs)}
+              name={t.firstAvailable}
+              detail={soonest(techs, t.fromTime)}
               icon={<Sparkles className="size-6" />}
               selected={techId === null}
               onSelect={() => setTechId(null)}
@@ -221,9 +219,7 @@ export function KioskBookingFlow({
               <TechRow
                 key={tech.tech_id}
                 name={tech.full_name}
-                detail={`from ${timeLabel(tech.next_opening)} · ${tech.openings} ${
-                  tech.openings === 1 ? "opening" : "openings"
-                }`}
+                detail={`${t.fromTime(timeLabel(tech.next_opening))} · ${t.openings(tech.openings)}`}
                 icon={<UserRound className="size-6" />}
                 selected={techId === tech.tech_id}
                 onSelect={() => setTechId(tech.tech_id)}
@@ -239,25 +235,22 @@ export function KioskBookingFlow({
   if (step === "time") {
     return (
       <Screen
-        title="When suits you?"
-        subtitle={`${minutes} min · ${formatMoney(total)}`}
+        title={t.whenSuitsYou}
+        subtitle={`${t.minutesShort(minutes)} · ${formatMoney(total)}`}
         onBack={() => setStep("tech")}
         footer={null}
       >
         {collision ? (
           <p className="mb-4 flex items-center gap-3 rounded-2xl border border-warning-border bg-warning-bg px-5 py-4 text-xl text-warning">
             <AlertTriangle className="size-6 shrink-0" />
-            That time just got taken. Here&apos;s what&apos;s left.
+            {t.timeTaken}
           </p>
         ) : null}
 
         {slots === null ? (
-          <Spinner label="Finding times…" />
+          <Spinner label={t.findingTimes} />
         ) : slots.length === 0 ? (
-          <Empty
-            title="No times left today"
-            body="Please see the front desk — they can look at tomorrow."
-          />
+          <Empty title={t.noTimesLeft} body={t.noTimesLeftBody} />
         ) : (
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {dedupe(slots, techId).map((slot) => (
@@ -273,7 +266,7 @@ export function KioskBookingFlow({
             ))}
           </div>
         )}
-        {busy ? <Spinner label="Booking…" /> : null}
+        {busy ? <Spinner label={t.booking} /> : null}
       </Screen>
     );
   }
@@ -289,6 +282,7 @@ export function KioskBooked({
   booking: Extract<KioskBooking, { result: "booked" }>;
   onDone: () => void;
 }) {
+  const { t } = useKioskText();
   const [paused, setPaused] = useState(false);
   const [left, setLeft] = useState(10);
 
@@ -307,26 +301,24 @@ export function KioskBooked({
       <span className="flex size-24 items-center justify-center rounded-full bg-success-bg text-success">
         <Check className="size-14" />
       </span>
-      <p className="text-[clamp(2.5rem,8vw,4.5rem)] font-semibold leading-none">You&apos;re booked</p>
+      <p className="text-[clamp(2.5rem,8vw,4.5rem)] font-semibold leading-none">{t.youreBooked}</p>
 
       <div className="w-full max-w-lg space-y-2 rounded-3xl border border-subtle bg-surface-raised p-6">
         <p className="text-4xl font-semibold tabular-nums">{timeLabel(booking.starts_at)}</p>
         <p className="text-xl text-secondary-text">{booking.services}</p>
         {booking.tech_name ? (
-          <p className="text-lg text-muted-text">with {booking.tech_name}</p>
+          <p className="text-lg text-muted-text">{t.with(booking.tech_name)}</p>
         ) : null}
         <p className="text-lg text-muted-text">
-          about {booking.minutes} min
-          {booking.ahead > 0
-            ? ` · ${booking.ahead} ${booking.ahead === 1 ? "booking" : "bookings"} before yours`
-            : ""}
+          {t.aboutMinutes(booking.minutes)}
+          {booking.ahead > 0 ? t.bookingsBefore(booking.ahead) : ""}
         </p>
       </div>
 
       {paused ? (
-        <p className="text-lg text-muted-text">Take your time — tap when you&apos;re done.</p>
+        <p className="text-lg text-muted-text">{t.takeYourTime}</p>
       ) : (
-        <p className="text-lg text-muted-text tabular-nums">Clearing in {left}…</p>
+        <p className="text-lg text-muted-text tabular-nums">{t.clearingIn(left)}</p>
       )}
 
       <div className="flex gap-3">
@@ -336,7 +328,7 @@ export function KioskBooked({
             onClick={() => setPaused(true)}
             className="min-h-[72px] rounded-2xl border border-subtle px-8 text-xl font-semibold text-secondary-text"
           >
-            Give me a minute
+            {t.giveMeAMinute}
           </button>
         ) : null}
         <button
@@ -344,7 +336,7 @@ export function KioskBooked({
           onClick={onDone}
           className="min-h-[72px] rounded-2xl bg-accent-default px-10 text-xl font-semibold text-on-accent"
         >
-          Done
+          {t.done}
         </button>
       </div>
     </div>
@@ -366,6 +358,7 @@ export function KioskRegister({
   onRegistered: (identity: BookingIdentity) => void;
   onCancel: () => void;
 }) {
+  const { t } = useKioskText();
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
   const [language, setLanguage] = useState("en");
@@ -385,7 +378,7 @@ export function KioskRegister({
     });
     setBusy(false);
     if (!id) {
-      setError(failed ?? "Please see the front desk.");
+      setError(failed ?? t.seeFrontDesk);
       return;
     }
     onRegistered({ customerId: id, displayName: first });
@@ -393,25 +386,25 @@ export function KioskRegister({
 
   return (
     <Screen
-      title="First time here?"
-      subtitle="Just a few things and you're set."
+      title={t.firstTimeHere}
+      subtitle={t.justAFewThings}
       onBack={onCancel}
       footer={
         <Footer
           left={error ?? ""}
           right=""
-          action={busy ? "Saving…" : "Continue"}
+          action={busy ? t.saving : t.continue_}
           disabled={busy || first.trim().length === 0}
           onAction={submit}
         />
       }
     >
       <div className="mx-auto w-full max-w-lg space-y-4">
-        <Field label="First name" value={first} onChange={setFirst} autoFocus />
-        <Field label="Last name" value={last} onChange={setLast} />
+        <Field label={t.firstName} value={first} onChange={setFirst} autoFocus />
+        <Field label={t.lastName} value={last} onChange={setLast} />
 
         <div className="space-y-2">
-          <label className="block text-lg font-medium">Language</label>
+          <label className="block text-lg font-medium">{t.language}</label>
           <div className="flex gap-2">
             {[
               { value: "en", label: "English" },
@@ -435,8 +428,8 @@ export function KioskRegister({
         </div>
 
         <Field
-          label="Anything we should avoid?"
-          hint="Allergies or sensitivities. Leave blank if none."
+          label={t.avoidLabel}
+          hint={t.avoidHint}
           value={sensitivities}
           onChange={setSensitivities}
         />
@@ -460,6 +453,7 @@ function Screen({
   footer: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const { t } = useKioskText();
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="px-8 pt-4">
@@ -469,7 +463,7 @@ function Screen({
           className="mb-3 inline-flex min-h-14 items-center gap-2 text-lg font-medium text-muted-text"
         >
           <ArrowLeft className="size-5" />
-          Back
+          {t.back}
         </button>
         <h2 className="text-4xl font-semibold">{title}</h2>
         {subtitle ? <p className="mt-1 text-xl text-secondary-text">{subtitle}</p> : null}
@@ -623,12 +617,12 @@ function dedupe(slots: KioskSlot[], techId: string | null): KioskSlot[] {
   });
 }
 
-function soonest(techs: KioskTechOption[]): string {
+function soonest(techs: KioskTechOption[], fromTime: (time: string) => string): string {
   if (techs.length === 0) return "";
   const first = techs.reduce((best, tech) =>
     Date.parse(tech.next_opening) < Date.parse(best.next_opening) ? tech : best,
   );
-  return `from ${timeLabel(first.next_opening)}`;
+  return fromTime(timeLabel(first.next_opening));
 }
 
 function timeLabel(iso: string): string {

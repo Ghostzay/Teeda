@@ -28,8 +28,8 @@ export type GuideSection = {
 };
 
 export const GUIDE_INTRO: Bi = {
-  en: "Every screen in Teeda, in plain language. Pick a section — you don't need to read it in order.",
-  vi: "Hướng dẫn từng màn hình trong Teeda, viết dễ hiểu. Chọn mục bất kỳ — không cần đọc theo thứ tự.",
+  en: "Every screen in Zolvora, in plain language. Pick a section — you don't need to read it in order.",
+  vi: "Hướng dẫn từng màn hình trong Zolvora, viết dễ hiểu. Chọn mục bất kỳ — không cần đọc theo thứ tự.",
 };
 
 export const GUIDE_SECTIONS: GuideSection[] = [

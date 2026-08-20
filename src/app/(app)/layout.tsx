@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { Sparkles } from "lucide-react";
 
 import { MobileNav, Sidebar } from "@/components/app-nav";
+import { ZolvoraMark } from "@/components/brand";
 import { AppFrame } from "@/components/app-frame";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { UserMenu } from "@/components/user-menu";
@@ -31,7 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 shrink-0 items-center gap-3 border-b border-subtle bg-surface-sunken px-4">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent-default text-on-accent">
-            <Sparkles className="size-4.5" />
+            <ZolvoraMark className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[0.9375rem] font-semibold leading-tight">{salon.name}</p>

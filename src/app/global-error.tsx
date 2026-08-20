@@ -27,7 +27,7 @@ export default function GlobalError({
         }}
       >
         <div style={{ maxWidth: "34rem" }}>
-          <h1 style={{ fontSize: "1.5rem", margin: "0 0 0.5rem" }}>Teeda couldn&apos;t start</h1>
+          <h1 style={{ fontSize: "1.5rem", margin: "0 0 0.5rem" }}>Zolvora couldn&apos;t start</h1>
           <p style={{ margin: "0 0 1rem", lineHeight: 1.5, color: "#c8bed0" }}>
             Something failed before the app could load. Reloading usually fixes it. If it doesn&apos;t,
             send us the text below.

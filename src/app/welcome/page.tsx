@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { Sparkles } from "lucide-react";
+
+import { ZolvoraLogo } from "@/components/brand";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,9 +28,7 @@ export default async function WelcomePage() {
     <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-            <Sparkles className="size-7" />
-          </div>
+          <ZolvoraLogo size={72} priority />
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Set up your salon</h1>
             <p className="text-sm text-muted-foreground">

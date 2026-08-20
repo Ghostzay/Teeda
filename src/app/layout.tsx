@@ -31,7 +31,7 @@ const inter = Inter({ subsets: ["latin", "vietnamese"], variable: "--font-text" 
 const montserrat = Montserrat({ subsets: ["latin", "vietnamese"], variable: "--font-display" });
 
 export const metadata: Metadata = {
-  title: "Teeda — Salon Management",
+  title: "Zolvora — Salon Management",
   description: "Fair turn rotation, walk-ins, appointments and clients for nail salons.",
 };
 

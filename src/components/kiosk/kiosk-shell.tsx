@@ -6,6 +6,7 @@ import { WifiOff } from "lucide-react";
 
 import { useTapGesture } from "@/components/kiosk/use-tap-gesture";
 import { exitKioskMode, refreshKioskSession } from "@/lib/actions/kiosk-mode";
+import { KioskLangProvider, useKioskText, type KioskLang } from "@/lib/kiosk-i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -26,7 +27,26 @@ export function KioskShell({
   deviceLabel: string;
   children: React.ReactNode;
 }) {
+  return (
+    <KioskLangProvider>
+      <KioskShellInner salonName={salonName} deviceLabel={deviceLabel}>
+        {children}
+      </KioskShellInner>
+    </KioskLangProvider>
+  );
+}
+
+function KioskShellInner({
+  salonName,
+  deviceLabel,
+  children,
+}: {
+  salonName: string;
+  deviceLabel: string;
+  children: React.ReactNode;
+}) {
   const online = useOnline();
+  const { t } = useKioskText();
   useSessionKeeper();
 
   return (
@@ -48,18 +68,50 @@ export function KioskShell({
           className="flex items-center justify-center gap-3 bg-warning-bg px-6 py-3 text-warning"
         >
           <WifiOff className="size-5 shrink-0" />
-          <span className="text-lg font-semibold">
-            No connection — checking in will retry automatically.
-          </span>
+          <span className="text-lg font-semibold">{t.offline}</span>
         </div>
       ) : null}
 
-      <header className="flex items-center justify-between px-8 pt-8">
+      <header className="flex items-center justify-between gap-4 px-8 pt-8">
         <ExitHatch salonName={salonName} />
-        <span className="text-meta uppercase tracking-widest text-muted-text">{deviceLabel}</span>
+        <div className="flex items-center gap-4">
+          <LangToggle />
+          <span className="text-meta uppercase tracking-widest text-muted-text">{deviceLabel}</span>
+        </div>
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+    </div>
+  );
+}
+
+/**
+ * The customer's language, as a visible control rather than a buried setting.
+ * Native names on the buttons — "Tiếng Việt" is findable by the person who
+ * needs it in a way a flag or the word "Vietnamese" is not.
+ */
+function LangToggle() {
+  const { lang, setLang } = useKioskText();
+  const options: { value: KioskLang; label: string }[] = [
+    { value: "en", label: "English" },
+    { value: "vi", label: "Tiếng Việt" },
+  ];
+
+  return (
+    <div className="flex rounded-full border border-subtle bg-surface-raised p-1">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => setLang(option.value)}
+          className={cn(
+            "min-h-11 rounded-full px-4 text-base font-semibold transition-colors",
+            lang === option.value ? "bg-accent-default text-on-accent" : "text-secondary-text",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -75,6 +127,7 @@ export function KioskShell({
  */
 function ExitHatch({ salonName }: { salonName: string }) {
   const router = useRouter();
+  const { t } = useKioskText();
   const [asking, setAsking] = useState(false);
   const [pin, setPin] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -101,11 +154,11 @@ function ExitHatch({ salonName }: { salonName: string }) {
     setBusy(false);
     setMessage(
       result.result === "locked_out"
-        ? "Too many tries. Try again in a few minutes."
+        ? t.lockedOut
         : result.result === "no_pin"
-          ? "No manager PIN has been set for this salon."
+          ? t.noPinSet
           : // Never "two attempts left" — that is help for somebody guessing.
-            "That PIN didn't match.",
+            t.wrongPin,
     );
   };
 
@@ -123,8 +176,8 @@ function ExitHatch({ salonName }: { salonName: string }) {
       {asking ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-canvas/95 p-8">
           <div className="w-full max-w-sm space-y-4 rounded-2xl border border-subtle bg-surface-raised p-6">
-            <p className="text-title">Manager PIN</p>
-            <p className="text-sm text-muted-text">Leaves kiosk mode on this tablet.</p>
+            <p className="text-title">{t.managerPin}</p>
+            <p className="text-sm text-muted-text">{t.leavesKiosk}</p>
             <input
               type="password"
               inputMode="numeric"
@@ -144,7 +197,7 @@ function ExitHatch({ salonName }: { salonName: string }) {
                 }}
                 className="min-h-14 flex-1 rounded-xl border border-subtle text-lg font-semibold text-secondary-text"
               >
-                Cancel
+                {t.cancel}
               </button>
               <button
                 type="button"
@@ -157,7 +210,7 @@ function ExitHatch({ salonName }: { salonName: string }) {
                     : "bg-accent-default text-on-accent",
                 )}
               >
-                {busy ? "Checking…" : "Exit kiosk"}
+                {busy ? t.checking : t.exitKiosk}
               </button>
             </div>
           </div>
