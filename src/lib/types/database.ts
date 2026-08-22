@@ -74,6 +74,17 @@ export type Database = {
           checkin_late_minutes: number;
           /** bcrypt. Never sent to a client — coerced to a boolean server-side. */
           kiosk_exit_pin_hash: string | null;
+          /** The subdomain: {slug}.<root>. Set by trigger when absent. */
+          slug: string;
+          /** Future custom-domain mapping (book.lotusnails.com). Unused today. */
+          custom_domain: string | null;
+          /** Non-null = paused. Data retained; users see a status screen. */
+          suspended_at: string | null;
+          logo_url: string | null;
+          /** One hex the owner picked; the app derives the AA-safe accent. */
+          brand_color: string | null;
+          /** The "Powered by Zolvora" mark. Platform-managed premium flag. */
+          powered_by: boolean;
         };
         Insert: {
           id?: string;
@@ -90,6 +101,12 @@ export type Database = {
           checkin_early_minutes?: number;
           checkin_late_minutes?: number;
           kiosk_exit_pin_hash?: string | null;
+          slug?: string;
+          custom_domain?: string | null;
+          suspended_at?: string | null;
+          logo_url?: string | null;
+          brand_color?: string | null;
+          powered_by?: boolean;
         };
         Update: {
           id?: string;
@@ -106,7 +123,40 @@ export type Database = {
           checkin_early_minutes?: number;
           checkin_late_minutes?: number;
           kiosk_exit_pin_hash?: string | null;
+          slug?: string;
+          custom_domain?: string | null;
+          suspended_at?: string | null;
         };
+        Relationships: [];
+      };
+      impersonations: {
+        Row: {
+          admin_id: string;
+          salon_id: string;
+          started_at: string;
+        };
+        Insert: {
+          admin_id: string;
+          salon_id: string;
+          started_at?: string;
+        };
+        Update: {
+          salon_id?: string;
+          started_at?: string;
+        };
+        Relationships: [];
+      };
+      platform_audit_log: {
+        Row: {
+          id: string;
+          admin_id: string;
+          action: string;
+          salon_id: string | null;
+          detail: Json | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
       profiles: {
@@ -1117,6 +1167,36 @@ export type Database = {
       };
       // One bit, so the hash never leaves the database to answer a question the
       // UI only needs a boolean for.
+      // Public tenant lookup for the edge middleware and the login screen.
+      // Answers only what a login page prints; null for an unknown slug.
+      salon_by_slug: {
+        Args: { p_slug: string };
+        Returns: unknown;
+      };
+      admin_list_salons: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
+      admin_create_salon: {
+        Args: { p_name: string; p_slug?: string | null };
+        Returns: unknown;
+      };
+      admin_attach_owner: {
+        Args: { p_salon: string; p_user: string; p_full_name: string };
+        Returns: undefined;
+      };
+      admin_set_salon_suspended: {
+        Args: { p_salon: string; p_suspended: boolean };
+        Returns: undefined;
+      };
+      admin_impersonate: {
+        Args: { p_salon: string };
+        Returns: string;
+      };
+      admin_stop_impersonation: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
       salon_has_exit_pin: {
         Args: Record<string, never>;
         Returns: boolean;

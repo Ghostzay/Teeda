@@ -300,6 +300,8 @@ export type SessionContext = {
   /** Keys the PIN lockout to this device. Null when not in kiosk mode. */
   kioskDeviceKey: string | null;
   isSuperAdmin: boolean;
+  /** True while a platform admin is looking at a salon that is not their own. */
+  impersonating: boolean;
   isManager: boolean;
   isAdmin: boolean;
   isTech: boolean;
@@ -346,16 +348,19 @@ export const APPOINTMENT_STATUS_LABEL: Record<AppointmentStatus, string> = {
 };
 
 export const ROLE_LABEL: Record<UserRole, string> = {
-  super_admin: "Owner",
-  manager: "Manager",
-  admin: "Admin",
+  // The stored enum values are frozen (Postgres cannot drop them, and every
+  // policy names them); the words people see are not. super_admin is the
+  // platform, manager is the salon's owner.
+  super_admin: "Platform admin",
+  manager: "Owner",
+  admin: "Front desk",
   tech: "Tech",
   kiosk: "Kiosk device",
 };
 
 export const ROLE_DESCRIPTION: Record<UserRole, string> = {
-  super_admin: "The salon owner. Same access as a manager.",
-  manager: "Full access, including settings, team and takings.",
+  super_admin: "Zolvora staff. Cross-salon: creates and manages salons.",
+  manager: "Runs this salon — settings, team, takings, everything.",
   admin: "Runs the floor — check-ins, jobs, queue and payments. No settings.",
   tech: "Their own turn, clients and appointments.",
   kiosk: "A check-in tablet. Reads nothing directly — only what the check-in screen shows.",

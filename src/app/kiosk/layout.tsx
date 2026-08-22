@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
+import { BrandAccent } from "@/components/brand-accent";
+import { SuspendedScreen } from "@/components/suspended-screen";
 import { requireKiosk } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +38,15 @@ export const viewport: Viewport = {
  * sidebar, no user menu. Not hidden with CSS — absent.
  */
 export default async function KioskLayout({ children }: { children: React.ReactNode }) {
-  await requireKiosk();
-  return <>{children}</>;
+  const session = await requireKiosk();
+  // A paused salon's tablet says so instead of taking check-ins.
+  if (session.salon.suspended_at) {
+    return <SuspendedScreen salonName={session.salon.name} />;
+  }
+  return (
+    <>
+      <BrandAccent color={session.salon.brand_color} />
+      {children}
+    </>
+  );
 }

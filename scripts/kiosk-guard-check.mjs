@@ -52,13 +52,16 @@ const PUBLIC = [
   "src/app/kiosk/",
   "src/app/kiosk-stalled/",
   "src/app/brand-preview/",
+  // The unknown-subdomain page: reached by middleware rewrite, has no session
+  // to guard and shows nothing but its own two sentences.
+  "src/app/salon-not-found/",
 ];
 for (const file of walk("src/app")) {
   if (PUBLIC.some((p) => file.startsWith(p))) continue;
   if (file === "src/app/layout.tsx") continue; // root shell, renders no data
   const body = readFileSync(file, "utf8");
-  if (/require(Session|Manager|FloorAccess|Kiosk)|getSessionContext/.test(body)) ok(file);
-  else bad(file, "no requireSession/requireManager/requireFloorAccess/getSessionContext");
+  if (/require(Session|Manager|FloorAccess|Kiosk|SuperAdmin)|getSessionContext/.test(body)) ok(file);
+  else bad(file, "no requireSession/requireManager/requireFloorAccess/requireSuperAdmin/getSessionContext");
 }
 
 console.log("\nEvery /kiosk entry point calls requireKiosk:");

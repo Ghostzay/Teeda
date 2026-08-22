@@ -2,6 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { KIOSK_COOKIE, readKioskMode } from "@/lib/kiosk-mode";
+import {
+  TENANT_SLUG_HEADER,
+  TENANT_STATE_HEADER,
+  lookupSalonBySlug,
+  parseTenantHost,
+} from "@/lib/tenant";
 import type { Database } from "@/lib/types/database";
 
 /**
@@ -12,33 +18,113 @@ import type { Database } from "@/lib/types/database";
  */
 /* `/brand-preview` is the design-system reference sheet: static markup, no
    data, no session — public the way a styleguide is public. */
-const PUBLIC_ROUTES = ["/login", "/auth", "/kiosk-stalled", "/brand-preview"];
+const PUBLIC_ROUTES = ["/login", "/auth", "/kiosk-stalled", "/salon-not-found", "/brand-preview"];
 
 /**
  * Refreshes the auth cookies on every request and gates the app routes.
  * Must run before any Server Component reads the session.
  */
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  // The one thing that must never happen here is an uncaught throw: this
+  // function fronts EVERY request, so an exception is not a broken page, it
+  // is a broken product (MIDDLEWARE_INVOCATION_FAILED on everything). The two
+  // rules that follow from that:
+  //   * misconfiguration gets a clear, named response, not a crash;
+  //   * the incoming request's headers are never mutated — the deployed edge
+  //     runtime can hand middleware an immutable request, so the resolution
+  //     travels on a CLONE, per Next's documented pattern.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // Say exactly what is wrong, in the browser and in the logs. A bare crash
+    // here cost a debugging round trip once; never again.
+    console.error(
+      "Middleware cannot run: NEXT_PUBLIC_SUPABASE_URL and/or NEXT_PUBLIC_SUPABASE_ANON_KEY are not set in this deployment's environment variables.",
+    );
+    return new NextResponse(
+      "Server configuration error: Supabase environment variables are missing. " +
+        "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in the hosting environment and redeploy.",
+      { status: 500, headers: { "content-type": "text/plain" } },
+    );
+  }
 
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
-          );
-        },
+  // --------------------------------------------------------------------------
+  // Tenant resolution, before anything else: which salon's front door is this?
+  //
+  // The answer travels DOWN the request as headers for layouts and the login
+  // page to read. It is presentation and routing — never query scope. RLS
+  // under auth.uid() remains the only isolation boundary; a forged Host gets
+  // a login page wearing a salon's name and nothing else.
+  //
+  // Written onto a clone, never onto request.headers itself — see above. The
+  // clone also starts with any spoofed copies of our own headers stripped, so
+  // downstream only ever sees what THIS function resolved.
+  // --------------------------------------------------------------------------
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete(TENANT_SLUG_HEADER);
+  requestHeaders.delete(TENANT_STATE_HEADER);
+
+  try {
+    const tenant = parseTenantHost(request.headers.get("host"));
+    if (tenant.kind === "salon") {
+      const salon = await lookupSalonBySlug(tenant.slug);
+      if (!salon) {
+        // Unknown subdomain: one clean page. A rewrite, not a redirect, so the
+        // typo stays in the address bar; and nothing on the page hints at
+        // which slugs DO exist.
+        const url = request.nextUrl.clone();
+        url.pathname = "/salon-not-found";
+        url.search = "";
+        return NextResponse.rewrite(url);
+      }
+      requestHeaders.set(TENANT_SLUG_HEADER, salon.slug);
+      requestHeaders.set(TENANT_STATE_HEADER, salon.suspended ? "suspended" : "active");
+    }
+  } catch (error) {
+    // Tenant resolution is branding and routing, not auth: if it somehow
+    // throws, the front door must not fall over with it. Log loudly and carry
+    // on as the apex — the failure is visible in the logs, not to customers.
+    console.error("Tenant resolution failed; continuing as apex:", error);
+  }
+
+  const withResolvedHeaders = () => NextResponse.next({ request: { headers: requestHeaders } });
+  let response = withResolvedHeaders();
+
+  // Cookie state lives in OUR map, layered over the incoming request's
+  // cookies, which are only ever READ. The old pattern wrote refreshed tokens
+  // back with request.cookies.set() — a mutation of the incoming request by
+  // another name, and exactly the class of thing an immutable edge request
+  // rejects.
+  const cookieOverrides = new Map<string, string>();
+  const currentCookies = () => {
+    const merged = new Map(request.cookies.getAll().map(({ name, value }) => [name, value]));
+    for (const [name, value] of cookieOverrides) merged.set(name, value);
+    return [...merged.entries()].map(([name, value]) => ({ name, value }));
+  };
+
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return currentCookies();
+      },
+      setAll(cookiesToSet) {
+        // Refreshed auth cookies must reach BOTH sides: the response (so the
+        // browser stores them) and the forwarded request headers (so server
+        // components in this same render see the fresh token).
+        cookiesToSet.forEach(({ name, value }) => cookieOverrides.set(name, value));
+        requestHeaders.set(
+          "cookie",
+          currentCookies()
+            .map(({ name, value }) => `${name}=${value}`)
+            .join("; "),
+        );
+        response = withResolvedHeaders();
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options),
+        );
       },
     },
-  );
+  });
 
   // Do not remove: this refreshes the session token.
   const {

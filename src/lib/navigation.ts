@@ -13,6 +13,7 @@ import {
   UserCog,
   Users,
   Wallet,
+  Shield,
 } from "lucide-react";
 
 import type { UserRole } from "@/lib/types";
@@ -114,8 +115,14 @@ const TECH_NAV: NavGroup[] = [
 ];
 
 export function navForRole(role: UserRole): NavGroup[] {
-  // Single salon this iteration: the owner sees exactly the manager's screens.
-  if (role === "super_admin") return MANAGER_NAV;
+  // The platform admin inside a salon (support view) sees the owner's
+  // screens, plus the way back to the console.
+  if (role === "super_admin") {
+    return [
+      { label: "Platform", items: [{ href: "/admin", label: "Platform console", short: "Platform", icon: Shield }] },
+      ...MANAGER_NAV,
+    ];
+  }
   if (role === "manager") return MANAGER_NAV;
   if (role === "admin") return ADMIN_NAV;
   // A kiosk has no navigation at all — it renders its own shell and never the
@@ -139,5 +146,7 @@ export function homeForRole(role: UserRole): string {
   // staff holding a tablet, not a tablet.
   if (role === "kiosk") return "/kiosk/ready";
   if (role === "tech") return "/tech";
+  // The platform admin's home is the console, not a salon's dashboard.
+  if (role === "super_admin") return "/admin";
   return "/dashboard";
 }
