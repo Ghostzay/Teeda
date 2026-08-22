@@ -102,6 +102,10 @@ from (
                  where table_schema = 'public' and table_name = 'salons'
                    and column_name = 'slug')),
     (33, '20260728320000_provisioning.sql',
-         to_regclass('public.platform_audit_log') is not null)
+         to_regclass('public.platform_audit_log') is not null),
+    (34, '20260728330000_branding.sql',
+         exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'salons'
+                   and column_name = 'brand_color'))
 ) as t (step, file, applied)
 order by step;

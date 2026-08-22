@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 
 import { ZolvoraLogo, ZolvoraWordmark } from "@/components/brand";
+import { BrandAccent } from "@/components/brand-accent";
 import { TENANT_SLUG_HEADER, TENANT_STATE_HEADER, lookupSalonBySlug } from "@/lib/tenant";
 
 import { LoginForm } from "./login-form";
@@ -21,9 +22,21 @@ export default async function LoginPage({
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-10">
+      {salon ? <BrandAccent color={salon.brand_color} /> : null}
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-4 text-center">
-          <ZolvoraLogo size={88} priority />
+          {salon?.logo_url ? (
+            // A plain <img>, deliberately: salon logos live at arbitrary
+            // hosts, and next/image would need each one allow-listed.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={salon.logo_url}
+              alt={salon.name}
+              className="max-h-24 w-auto max-w-[200px] object-contain"
+            />
+          ) : (
+            <ZolvoraLogo size={88} priority />
+          )}
           <div className="space-y-1">
             {salon ? (
               <>
@@ -52,7 +65,7 @@ export default async function LoginPage({
 
         <LoginForm next={next ?? "/"} />
 
-        {salon ? (
+        {salon && salon.powered_by ? (
           <p className="text-center text-meta text-muted-text">
             Powered by <ZolvoraWordmark className="text-meta" />
           </p>

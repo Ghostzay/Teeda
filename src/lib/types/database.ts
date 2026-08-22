@@ -80,6 +80,11 @@ export type Database = {
           custom_domain: string | null;
           /** Non-null = paused. Data retained; users see a status screen. */
           suspended_at: string | null;
+          logo_url: string | null;
+          /** One hex the owner picked; the app derives the AA-safe accent. */
+          brand_color: string | null;
+          /** The "Powered by Zolvora" mark. Platform-managed premium flag. */
+          powered_by: boolean;
         };
         Insert: {
           id?: string;
@@ -99,6 +104,9 @@ export type Database = {
           slug?: string;
           custom_domain?: string | null;
           suspended_at?: string | null;
+          logo_url?: string | null;
+          brand_color?: string | null;
+          powered_by?: boolean;
         };
         Update: {
           id?: string;

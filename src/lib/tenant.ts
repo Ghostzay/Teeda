@@ -30,6 +30,9 @@ export type PublicSalon = {
   name: string;
   default_theme: string;
   suspended: boolean;
+  logo_url: string | null;
+  brand_color: string | null;
+  powered_by: boolean;
 };
 
 /** Request-header names the middleware uses to hand the resolution down. */

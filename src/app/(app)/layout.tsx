@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { MobileNav, Sidebar } from "@/components/app-nav";
 import { ZolvoraMark } from "@/components/brand";
+import { BrandAccent } from "@/components/brand-accent";
 import { AppFrame } from "@/components/app-frame";
 import { EntryReveal } from "@/components/entry-reveal";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
@@ -45,6 +46,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <EntryReveal play={playEntry} userId={session.userId} dayKey={dayKey}>
       <div className="flex h-dvh flex-col overflow-hidden bg-background">
+        <BrandAccent color={salon.brand_color} />
         {session.impersonating ? <ImpersonationBanner salonName={salon.name} /> : null}
         <div className="flex min-h-0 flex-1">
         {/* One subscription for the whole shell — every screen stays live. */}

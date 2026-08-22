@@ -4,6 +4,7 @@ import { Scissors, Users } from "lucide-react";
 import { ActionForm } from "@/components/action-form";
 import { AppearanceSettings } from "@/components/appearance-settings";
 import { KioskDevices } from "@/components/kiosk/kiosk-devices";
+import { BrandingCard } from "@/components/settings/branding-card";
 import { DashboardDefaultForm } from "@/components/dashboard-default-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -160,6 +161,11 @@ export default async function SettingsPage() {
           description="Client records, phone numbers and notes."
         />
       </div>
+      <BrandingCard
+        logoUrl={session.salon.logo_url}
+        brandColor={session.salon.brand_color}
+        slug={session.salon.slug}
+      />
       <KioskDevices devices={kioskDevices} hasExitPin={hasExitPin} />
 
     </div>

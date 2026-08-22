@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 
+import { BrandAccent } from "@/components/brand-accent";
 import { SuspendedScreen } from "@/components/suspended-screen";
 import { requireKiosk } from "@/lib/auth";
 
@@ -42,5 +43,10 @@ export default async function KioskLayout({ children }: { children: React.ReactN
   if (session.salon.suspended_at) {
     return <SuspendedScreen salonName={session.salon.name} />;
   }
-  return <>{children}</>;
+  return (
+    <>
+      <BrandAccent color={session.salon.brand_color} />
+      {children}
+    </>
+  );
 }
