@@ -1,102 +1,48 @@
 "use client";
 
-import { useState } from "react";
-
 import { ActionForm } from "@/components/action-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { signIn, signUp } from "@/lib/actions/auth";
-import { cn } from "@/lib/utils";
+import { signIn } from "@/lib/actions/auth";
 
-type Mode = "signin" | "signup";
-
+/**
+ * Sign in, and only sign in.
+ *
+ * The "New salon" tab that used to sit beside it is gone on purpose: salons
+ * are provisioned by the platform, owners arrive by emailed invite, and staff
+ * are added by their owner. A signup form on the public door was the first of
+ * the three layers that had to close — the RPC and the RLS policy behind it
+ * are closed in the same change.
+ */
 export function LoginForm({ next }: { next: string }) {
-  const [mode, setMode] = useState<Mode>("signin");
-
   return (
     <Card>
       <CardContent className="p-5">
-        <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
-          {(["signin", "signup"] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setMode(value)}
-              className={cn(
-                "h-9 rounded-md text-sm font-medium transition-colors",
-                mode === value
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {value === "signin" ? "Sign in" : "New salon"}
-            </button>
-          ))}
-        </div>
-
-        {/*
-          `key` is load-bearing: both branches render an <ActionForm> at the
-          same tree position, so without it React reuses the instance and its
-          useActionState hook — the form keeps posting to whichever action was
-          bound on first mount, and switching tabs silently calls the wrong one.
-        */}
-        {mode === "signin" ? (
-          <ActionForm key="signin" action={signIn} resetOnSuccess={false} className="space-y-4">
-            <input type="hidden" name="next" value={next} />
-            <Field
-              id="email"
-              name="email"
-              label="Email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@salon.com"
-              required
-            />
-            <Field
-              id="password"
-              name="password"
-              label="Password"
-              type="password"
-              autoComplete="current-password"
-              required
-            />
-            <SubmitButton className="w-full" size="lg">
-              Sign in
-            </SubmitButton>
-          </ActionForm>
-        ) : (
-          <ActionForm key="signup" action={signUp} resetOnSuccess={false} className="space-y-4">
-            <Field id="salon_name" name="salon_name" label="Salon name" placeholder="Polished Nail Bar" required />
-            <Field id="full_name" name="full_name" label="Your name" placeholder="Alex Tran" required />
-            <Field
-              id="signup_email"
-              name="email"
-              label="Email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@salon.com"
-              required
-            />
-            <Field
-              id="signup_password"
-              name="password"
-              label="Password"
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              required
-              hint="At least 8 characters."
-            />
-            <SubmitButton className="w-full" size="lg">
-              Create salon
-            </SubmitButton>
-            <p className="text-center text-xs text-muted-foreground">
-              You&apos;ll be the manager. Add your techs from Settings.
-            </p>
-          </ActionForm>
-        )}
+        <ActionForm action={signIn} resetOnSuccess={false} className="space-y-4">
+          <input type="hidden" name="next" value={next} />
+          <Field
+            id="email"
+            name="email"
+            label="Email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@salon.com"
+            required
+          />
+          <Field
+            id="password"
+            name="password"
+            label="Password"
+            type="password"
+            autoComplete="current-password"
+            required
+          />
+          <SubmitButton className="w-full" size="lg">
+            Sign in
+          </SubmitButton>
+        </ActionForm>
       </CardContent>
     </Card>
   );

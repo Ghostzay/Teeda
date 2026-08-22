@@ -5,6 +5,7 @@ import { MobileNav, Sidebar } from "@/components/app-nav";
 import { ZolvoraMark } from "@/components/brand";
 import { AppFrame } from "@/components/app-frame";
 import { EntryReveal } from "@/components/entry-reveal";
+import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { SuspendedScreen } from "@/components/suspended-screen";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { UserMenu } from "@/components/user-menu";
@@ -43,7 +44,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <EntryReveal play={playEntry} userId={session.userId} dayKey={dayKey}>
-      <div className="flex h-dvh overflow-hidden bg-background">
+      <div className="flex h-dvh flex-col overflow-hidden bg-background">
+        {session.impersonating ? <ImpersonationBanner salonName={salon.name} /> : null}
+        <div className="flex min-h-0 flex-1">
         {/* One subscription for the whole shell — every screen stays live. */}
         <RealtimeRefresher salonId={salon.id} />
 
@@ -81,7 +84,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </main>
         </div>
 
-        <MobileNav role={role} />
+          <MobileNav role={role} />
+        </div>
       </div>
     </EntryReveal>
   );

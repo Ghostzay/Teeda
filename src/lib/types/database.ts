@@ -121,6 +121,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      impersonations: {
+        Row: {
+          admin_id: string;
+          salon_id: string;
+          started_at: string;
+        };
+        Insert: {
+          admin_id: string;
+          salon_id: string;
+          started_at?: string;
+        };
+        Update: {
+          salon_id?: string;
+          started_at?: string;
+        };
+        Relationships: [];
+      };
+      platform_audit_log: {
+        Row: {
+          id: string;
+          admin_id: string;
+          action: string;
+          salon_id: string | null;
+          detail: Json | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;
@@ -1134,6 +1164,30 @@ export type Database = {
       salon_by_slug: {
         Args: { p_slug: string };
         Returns: unknown;
+      };
+      admin_list_salons: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
+      admin_create_salon: {
+        Args: { p_name: string; p_slug?: string | null };
+        Returns: unknown;
+      };
+      admin_attach_owner: {
+        Args: { p_salon: string; p_user: string; p_full_name: string };
+        Returns: undefined;
+      };
+      admin_set_salon_suspended: {
+        Args: { p_salon: string; p_suspended: boolean };
+        Returns: undefined;
+      };
+      admin_impersonate: {
+        Args: { p_salon: string };
+        Returns: string;
+      };
+      admin_stop_impersonation: {
+        Args: Record<string, never>;
+        Returns: undefined;
       };
       salon_has_exit_pin: {
         Args: Record<string, never>;

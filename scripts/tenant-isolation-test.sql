@@ -119,6 +119,26 @@ begin
   end loop;
 end $$;
 
+-- Platform-layer tables (added by the provisioning migration) reference
+-- salons without belonging to one. They must be INVISIBLE below the platform,
+-- which the same zero-B-rows assertion proves — so seed them a B-referencing
+-- row each and let the loop treat them like everything else.
+insert into public.salons (id, name, slug)
+values ('99999999-0000-0000-0000-000000000001', 'Zolvora HQ', 'zolvora-hq')
+on conflict (id) do nothing;
+insert into auth.users (id, email)
+values ('99999999-1111-0000-0000-000000000001', 'platform@iso.test')
+on conflict (id) do nothing;
+insert into public.profiles (id, salon_id, full_name, role)
+values ('99999999-1111-0000-0000-000000000001', '99999999-0000-0000-0000-000000000001',
+        'Platform Admin', 'super_admin')
+on conflict (id) do update set role = 'super_admin';
+insert into public.impersonations (admin_id, salon_id)
+values ('99999999-1111-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000001')
+on conflict (admin_id) do update set salon_id = excluded.salon_id;
+insert into public.platform_audit_log (admin_id, action, salon_id)
+values ('99999999-1111-0000-0000-000000000001', 'iso_test', 'bbbbbbbb-0000-0000-0000-000000000001');
+
 -- ----------------------------------------------------------------------------
 -- Coverage guard: every table that HAS a salon_id column must hold B rows,
 -- or this suite is quietly testing nothing for that table.

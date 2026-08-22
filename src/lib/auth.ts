@@ -42,11 +42,13 @@ export const getSessionContext = cache(async (): Promise<SessionContext | null> 
 
   if (!profile) return null;
 
-  const { data: salon } = await supabase
-    .from("salons")
-    .select("*")
-    .eq("id", profile.salon_id)
-    .maybeSingle();
+  // No .eq() filter, deliberately: RLS's own SELECT policy on salons is
+  // `id = current_salon_id()`, which is profile.salon_id for everyone — and
+  // the impersonated salon for a platform admin with an active support view.
+  // Filtering by profile.salon_id here would pin the admin to HQ and make
+  // impersonation half-real: database flipped, app shell not.
+  const { data: salonRows } = await supabase.from("salons").select("*").limit(2);
+  const salon = salonRows?.length === 1 ? salonRows[0] : null;
 
   if (!salon) return null;
 
@@ -73,6 +75,9 @@ export const getSessionContext = cache(async (): Promise<SessionContext | null> 
     kioskMode: kioskMode !== null,
     kioskDeviceKey: kioskMode?.deviceKey ?? null,
     isSuperAdmin: effectiveRole === "super_admin",
+    // The banner's flag: the salon RLS handed back is not the one on the
+    // profile, and only a platform admin can be in that state.
+    impersonating: profile.role === "super_admin" && salon.id !== profile.salon_id,
     // The owner is a manager with extra rights, not a separate track — the
     // SQL helpers agree, so settings never lock the owner out.
     isManager: effectiveRole === "manager" || effectiveRole === "super_admin",
@@ -106,6 +111,20 @@ export async function requireSession(): Promise<SessionContext> {
   const session = await getSessionContext();
   if (!session) redirect("/login");
   if (session.isKiosk) redirect("/kiosk");
+  return session;
+}
+
+/**
+ * Platform admin only — the /admin console. Checks the REAL role: a platform
+ * admin who put a tablet into kiosk mode is a kiosk like anyone else, but an
+ * impersonating admin (whose effective salon is someone else's) must still
+ * reach /admin to end the impersonation.
+ */
+export async function requireSuperAdmin(): Promise<SessionContext> {
+  const session = await getSessionContext();
+  if (!session) redirect("/login");
+  if (session.isKiosk) redirect("/kiosk");
+  if (session.realRole !== "super_admin") redirect(homeForRole(session.role));
   return session;
 }
 

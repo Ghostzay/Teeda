@@ -93,11 +93,15 @@ from (
          and pg_get_functiondef(to_regprocedure('public.set_kiosk_exit_pin(text)'))
                ~ 'search_path.*extensions'),
     (31, '20260728300000_zolvora_default_theme.sql',
+         -- Its artifact was bootstrap_salon's body, which migration 33 then
+         -- replaced wholesale — so either body proves this step ran.
          pg_get_functiondef(to_regprocedure('public.bootstrap_salon(text, text)'))
-           ~ 'zolvora'),
+           ~ 'zolvora|created by the platform'),
     (32, '20260728310000_tenancy.sql',
          exists (select 1 from information_schema.columns
                  where table_schema = 'public' and table_name = 'salons'
-                   and column_name = 'slug'))
+                   and column_name = 'slug')),
+    (33, '20260728320000_provisioning.sql',
+         to_regclass('public.platform_audit_log') is not null)
 ) as t (step, file, applied)
 order by step;
