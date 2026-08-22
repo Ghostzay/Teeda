@@ -94,6 +94,10 @@ from (
                ~ 'search_path.*extensions'),
     (31, '20260728300000_zolvora_default_theme.sql',
          pg_get_functiondef(to_regprocedure('public.bootstrap_salon(text, text)'))
-           ~ 'zolvora')
+           ~ 'zolvora'),
+    (32, '20260728310000_tenancy.sql',
+         exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'salons'
+                   and column_name = 'slug'))
 ) as t (step, file, applied)
 order by step;

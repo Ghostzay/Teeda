@@ -74,6 +74,12 @@ export type Database = {
           checkin_late_minutes: number;
           /** bcrypt. Never sent to a client — coerced to a boolean server-side. */
           kiosk_exit_pin_hash: string | null;
+          /** The subdomain: {slug}.<root>. Set by trigger when absent. */
+          slug: string;
+          /** Future custom-domain mapping (book.lotusnails.com). Unused today. */
+          custom_domain: string | null;
+          /** Non-null = paused. Data retained; users see a status screen. */
+          suspended_at: string | null;
         };
         Insert: {
           id?: string;
@@ -90,6 +96,9 @@ export type Database = {
           checkin_early_minutes?: number;
           checkin_late_minutes?: number;
           kiosk_exit_pin_hash?: string | null;
+          slug?: string;
+          custom_domain?: string | null;
+          suspended_at?: string | null;
         };
         Update: {
           id?: string;
@@ -106,6 +115,9 @@ export type Database = {
           checkin_early_minutes?: number;
           checkin_late_minutes?: number;
           kiosk_exit_pin_hash?: string | null;
+          slug?: string;
+          custom_domain?: string | null;
+          suspended_at?: string | null;
         };
         Relationships: [];
       };
@@ -1117,6 +1129,12 @@ export type Database = {
       };
       // One bit, so the hash never leaves the database to answer a question the
       // UI only needs a boolean for.
+      // Public tenant lookup for the edge middleware and the login screen.
+      // Answers only what a login page prints; null for an unknown slug.
+      salon_by_slug: {
+        Args: { p_slug: string };
+        Returns: unknown;
+      };
       salon_has_exit_pin: {
         Args: Record<string, never>;
         Returns: boolean;

@@ -52,6 +52,9 @@ const PUBLIC = [
   "src/app/kiosk/",
   "src/app/kiosk-stalled/",
   "src/app/brand-preview/",
+  // The unknown-subdomain page: reached by middleware rewrite, has no session
+  // to guard and shows nothing but its own two sentences.
+  "src/app/salon-not-found/",
 ];
 for (const file of walk("src/app")) {
   if (PUBLIC.some((p) => file.startsWith(p))) continue;

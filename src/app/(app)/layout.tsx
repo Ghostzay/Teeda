@@ -5,6 +5,7 @@ import { MobileNav, Sidebar } from "@/components/app-nav";
 import { ZolvoraMark } from "@/components/brand";
 import { AppFrame } from "@/components/app-frame";
 import { EntryReveal } from "@/components/entry-reveal";
+import { SuspendedScreen } from "@/components/suspended-screen";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { UserMenu } from "@/components/user-menu";
 import { signOut } from "@/lib/actions/auth";
@@ -23,6 +24,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const { profile, salon, role } = session;
+
+  // A suspended salon keeps its data and loses its floor. The platform admin
+  // passes so support can still look inside while it is paused.
+  if (salon.suspended_at && session.realRole !== "super_admin") {
+    return <SuspendedScreen salonName={salon.name} />;
+  }
 
   // The entry sequence, decided here so the overlay ships in the HTML: no
   // flash of dashboard first, and the per-user-per-day rule is enforced where

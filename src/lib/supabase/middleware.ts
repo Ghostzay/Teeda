@@ -2,6 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { KIOSK_COOKIE, readKioskMode } from "@/lib/kiosk-mode";
+import {
+  TENANT_SLUG_HEADER,
+  TENANT_STATE_HEADER,
+  lookupSalonBySlug,
+  parseTenantHost,
+} from "@/lib/tenant";
 import type { Database } from "@/lib/types/database";
 
 /**
@@ -12,13 +18,44 @@ import type { Database } from "@/lib/types/database";
  */
 /* `/brand-preview` is the design-system reference sheet: static markup, no
    data, no session — public the way a styleguide is public. */
-const PUBLIC_ROUTES = ["/login", "/auth", "/kiosk-stalled", "/brand-preview"];
+const PUBLIC_ROUTES = ["/login", "/auth", "/kiosk-stalled", "/salon-not-found", "/brand-preview"];
 
 /**
  * Refreshes the auth cookies on every request and gates the app routes.
  * Must run before any Server Component reads the session.
  */
 export async function updateSession(request: NextRequest) {
+  // --------------------------------------------------------------------------
+  // Tenant resolution, before anything else: which salon's front door is this?
+  //
+  // The answer travels DOWN the request as headers for layouts and the login
+  // page to read. It is presentation and routing — never query scope. RLS
+  // under auth.uid() remains the only isolation boundary; a forged Host gets
+  // a login page wearing a salon's name and nothing else.
+  // --------------------------------------------------------------------------
+  const tenant = parseTenantHost(request.headers.get("host"));
+  if (tenant.kind === "salon") {
+    const salon = await lookupSalonBySlug(tenant.slug);
+    if (!salon) {
+      // Unknown subdomain: one clean page. A rewrite, not a redirect, so the
+      // typo stays in the address bar; and nothing on the page hints at
+      // which slugs DO exist.
+      const url = request.nextUrl.clone();
+      url.pathname = "/salon-not-found";
+      url.search = "";
+      return NextResponse.rewrite(url);
+    }
+    request.headers.set(TENANT_SLUG_HEADER, salon.slug);
+    request.headers.set(
+      TENANT_STATE_HEADER,
+      salon.suspended ? "suspended" : "active",
+    );
+  } else {
+    // Stale headers from the client are not our resolution.
+    request.headers.delete(TENANT_SLUG_HEADER);
+    request.headers.delete(TENANT_STATE_HEADER);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(
